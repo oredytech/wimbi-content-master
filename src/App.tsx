@@ -11,6 +11,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/dashboard/Dashboard";
 import NewContent from "./pages/dashboard/NewContent";
+import Contents from "./pages/dashboard/Contents";
+import WordPress from "./pages/dashboard/WordPress";
+import Social from "./pages/dashboard/Social";
+import Settings from "./pages/dashboard/Settings";
 import NotFound from "./pages/NotFound";
 import RequireAuth from "./components/auth/RequireAuth";
 
@@ -43,10 +47,10 @@ const App = () => (
           >
             <Route index element={<Dashboard />} />
             <Route path="new-content" element={<NewContent />} />
-            <Route path="contents" element={<p className="p-4 text-center text-muted-foreground">Liste de vos contenus (à implémenter)</p>} />
-            <Route path="wordpress" element={<p className="p-4 text-center text-muted-foreground">Gestion des sites WordPress (à implémenter)</p>} />
-            <Route path="social" element={<p className="p-4 text-center text-muted-foreground">Gestion des réseaux sociaux (à implémenter)</p>} />
-            <Route path="settings" element={<p className="p-4 text-center text-muted-foreground">Paramètres du compte (à implémenter)</p>} />
+            <Route path="contents" element={<Contents />} />
+            <Route path="wordpress" element={<WordPress />} />
+            <Route path="social" element={<Social />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           {/* Catch-all route */}
