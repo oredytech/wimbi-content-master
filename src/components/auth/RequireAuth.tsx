@@ -9,11 +9,14 @@ interface RequireAuthProps {
 }
 
 const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
+  // Utiliser null comme valeur initiale pour indiquer "en cours de vérification"
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const location = useLocation();
 
   useEffect(() => {
     console.log("RequireAuth: Vérification de l'authentification...");
+    
+    // Créer un seul abonnement pour éviter les boucles
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       console.log("RequireAuth: État de l'authentification changé, utilisateur:", user ? "connecté" : "déconnecté");
       setIsAuthenticated(!!user);
@@ -36,6 +39,7 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
   // If not authenticated, redirect to login
   if (!isAuthenticated) {
     console.log("RequireAuth: Non authentifié, redirection vers login");
+    // Sauvegarder l'emplacement actuel pour y retourner après connexion
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,26 +8,43 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Vérifier si l'utilisateur est déjà connecté au chargement du composant
+  // Récupérer l'URL de redirection si elle existe
+  const from = location.state?.from?.pathname || '/dashboard';
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // L'utilisateur est déjà connecté, rediriger vers le tableau de bord
-        navigate('/dashboard');
+    // Vérification unique au chargement, pas à chaque rendu
+    const checkAuth = async () => {
+      try {
+        // Attendre un court instant pour que Firebase initialise correctement l'état d'authentification
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          if (user) {
+            // Utiliser replace: true pour remplacer l'entrée de l'historique
+            navigate(from, { replace: true });
+          }
+          // Quoi qu'il arrive, on indique que la vérification est terminée
+          setIsCheckingAuth(false);
+          unsubscribe(); // Se désabonner immédiatement
+        });
+      } catch (error) {
+        console.error("Erreur lors de la vérification de l'authentification:", error);
+        setIsCheckingAuth(false);
       }
-    });
-
-    return () => unsubscribe();
-  }, [navigate]);
+    };
+    
+    checkAuth();
+  }, [navigate, from]); // Dépendances importantes
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +57,7 @@ const Login = () => {
         description: "Bienvenue sur Wimbi Master!",
       });
       // Rediriger l'utilisateur après la connexion réussie
-      navigate('/dashboard', { replace: true });
+      navigate(from, { replace: true });
     } catch (error) {
       console.error('Erreur de connexion:', error);
       toast({
@@ -52,6 +69,15 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  // Afficher un indicateur de chargement pendant la vérification de l'authentification
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-wimbi"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
