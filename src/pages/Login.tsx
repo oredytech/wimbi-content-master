@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,29 +16,27 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login process
-    setTimeout(() => {
-      if (email && password) {
-        // For demo purposes, any valid email/password will work
-        localStorage.setItem('wimbiUser', JSON.stringify({ email }));
-        toast({
-          title: "Connexion réussie",
-          description: "Bienvenue sur Wimbi Master!",
-        });
-        navigate('/dashboard');
-      } else {
-        toast({
-          title: "Erreur de connexion",
-          description: "Veuillez vérifier vos identifiants et réessayer.",
-          variant: "destructive",
-        });
-      }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Connexion réussie",
+        description: "Bienvenue sur Wimbi Master!",
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Erreur de connexion:', error);
+      toast({
+        title: "Erreur de connexion",
+        description: "Veuillez vérifier vos identifiants et réessayer.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (

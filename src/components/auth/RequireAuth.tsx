@@ -1,6 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -11,9 +13,12 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
-    // Check if user is logged in
-    const user = localStorage.getItem('wimbiUser');
-    setIsAuthenticated(!!user);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   // Show nothing while checking authentication

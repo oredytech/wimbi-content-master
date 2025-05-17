@@ -7,6 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const Signup = () => {
   const [name, setName] = useState('');
@@ -17,7 +19,7 @@ const Signup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!agreeTerms) {
@@ -30,24 +32,26 @@ const Signup = () => {
     
     setIsLoading(true);
 
-    // Simulate signup process
-    setTimeout(() => {
-      if (name && email && password) {
-        localStorage.setItem('wimbiUser', JSON.stringify({ name, email }));
-        toast({
-          title: "Compte créé avec succès",
-          description: "Bienvenue sur Wimbi Master!",
-        });
-        navigate('/dashboard');
-      } else {
-        toast({
-          title: "Erreur d'inscription",
-          description: "Veuillez remplir tous les champs obligatoires.",
-          variant: "destructive",
-        });
-      }
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Update the user profile with the name
+      await updateProfile(userCredential.user, { displayName: name });
+      
+      toast({
+        title: "Compte créé avec succès",
+        description: "Bienvenue sur Wimbi Master!",
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      console.error("Erreur d'inscription:", error);
+      toast({
+        title: "Erreur d'inscription",
+        description: "Veuillez vérifier vos informations et réessayer.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
