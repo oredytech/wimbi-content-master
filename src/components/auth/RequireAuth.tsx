@@ -13,7 +13,9 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
+    console.log("RequireAuth: Vérification de l'authentification...");
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("RequireAuth: État de l'authentification changé, utilisateur:", user ? "connecté" : "déconnecté");
       setIsAuthenticated(!!user);
     });
 
@@ -23,6 +25,7 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
 
   // Show nothing while checking authentication
   if (isAuthenticated === null) {
+    console.log("RequireAuth: En attente de vérification...");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-wimbi"></div>
@@ -32,10 +35,12 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
 
   // If not authenticated, redirect to login
   if (!isAuthenticated) {
+    console.log("RequireAuth: Non authentifié, redirection vers login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // If authenticated, show children
+  console.log("RequireAuth: Authentifié, affichage du contenu protégé");
   return <>{children}</>;
 };
 

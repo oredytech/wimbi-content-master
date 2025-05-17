@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -15,6 +16,18 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Vérifier si l'utilisateur est déjà connecté au chargement du composant
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // L'utilisateur est déjà connecté, rediriger vers le tableau de bord
+        navigate('/dashboard');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +39,8 @@ const Login = () => {
         title: "Connexion réussie",
         description: "Bienvenue sur Wimbi Master!",
       });
-      navigate('/dashboard');
+      // Rediriger l'utilisateur après la connexion réussie
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error('Erreur de connexion:', error);
       toast({
