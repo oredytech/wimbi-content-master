@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/context/AppContext";
+import { connectWordPressSite } from "@/services/oauthService";
 
 interface AddWordPressSiteModalProps {
   isOpen: boolean;
@@ -13,8 +14,9 @@ interface AddWordPressSiteModalProps {
 }
 
 const AddWordPressSiteModal: React.FC<AddWordPressSiteModalProps> = ({ isOpen, onClose }) => {
-  const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { addWordPressSite } = useAppContext();
@@ -22,7 +24,7 @@ const AddWordPressSiteModal: React.FC<AddWordPressSiteModalProps> = ({ isOpen, o
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !url.trim()) {
+    if (!url.trim() || !username.trim() || !password.trim()) {
       toast({
         title: "Erreur",
         description: "Veuillez remplir tous les champs",
@@ -34,31 +36,31 @@ const AddWordPressSiteModal: React.FC<AddWordPressSiteModalProps> = ({ isOpen, o
     try {
       setIsLoading(true);
       
-      // Vérifier si l'URL est valide
-      if (!url.startsWith("http")) {
-        throw new Error("L'URL doit commencer par http:// ou https://");
+      // Utiliser le service de connexion WordPress réel
+      const result = await connectWordPressSite(url, username, password);
+      
+      if (!result.success || !result.siteInfo) {
+        throw new Error(result.error || "Échec de la connexion au site WordPress");
       }
       
-      // Simuler une API call pour connecter le site
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       // Ajouter le site WordPress
       addWordPressSite({
-        name,
-        url,
-        status: "connected",
-        posts: 0,
-        lastSync: new Date().toISOString()
+        name: result.siteInfo.name,
+        url: result.siteInfo.url,
+        status: result.siteInfo.status,
+        posts: result.siteInfo.posts,
+        lastSync: result.siteInfo.lastSync,
       });
 
       toast({
-        title: "Site ajouté",
-        description: `Le site ${name} a été connecté avec succès`,
+        title: "Site connecté",
+        description: `Le site ${result.siteInfo.name} a été connecté avec succès`,
       });
       
       // Réinitialiser le formulaire et fermer la modale
-      setName("");
       setUrl("");
+      setUsername("");
+      setPassword("");
       onClose();
     } catch (error) {
       toast({
@@ -80,27 +82,43 @@ const AddWordPressSiteModal: React.FC<AddWordPressSiteModalProps> = ({ isOpen, o
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="site-name">Nom du site</Label>
+            <Label htmlFor="site-url">URL du site</Label>
             <Input
-              id="site-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Mon Blog"
+              id="site-url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://votre-site.com"
               disabled={isLoading}
               required
             />
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="site-url">URL du site</Label>
+            <Label htmlFor="site-username">Nom d'utilisateur</Label>
             <Input
-              id="site-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://mon-blog.com"
+              id="site-username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="admin"
               disabled={isLoading}
               required
             />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="site-password">Mot de passe ou Clé d'application</Label>
+            <Input
+              id="site-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={isLoading}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Nous vous recommandons d'utiliser une <a href="https://make.wordpress.org/core/2020/11/05/application-passwords-integration-in-wordpress-5-6/" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">clé d'application</a> plutôt qu'un mot de passe administrateur.
+            </p>
           </div>
           
           <DialogFooter className="pt-4">

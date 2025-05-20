@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/context/AppContext";
-import { CheckboxItem, Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -59,19 +59,33 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
     try {
       setIsLoading(true);
       
-      // Simuler une API call pour planifier la publication
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Créer une date complète à partir de la date et de l'heure
+      const scheduledDateTime = new Date(`${date}T${time}`);
+      
+      // Vérifier si la date est dans le futur
+      if (scheduledDateTime <= new Date()) {
+        throw new Error("La date de publication doit être dans le futur");
+      }
 
-      // Ajouter la publication planifiée
+      // Dans une implémentation réelle, nous enverrions une requête à un serveur backend
+      // qui stockerait cette tâche et l'exécuterait au moment voulu
+      console.log("[Publication] Planification d'une publication pour:", scheduledDateTime);
+      console.log("[Publication] Contenu:", content);
+      console.log("[Publication] Plateformes:", platforms);
+      
+      // Pour l'instant, on simule une requête au serveur
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Ajouter localement la publication planifiée
       addScheduledPost({
         content,
-        date: `${date} ${time}`,
+        date: scheduledDateTime.toISOString(),
         platforms,
       });
 
       toast({
         title: "Publication planifiée",
-        description: `La publication a été planifiée pour le ${date} à ${time}`,
+        description: `La publication a été planifiée pour le ${new Date(scheduledDateTime).toLocaleDateString('fr-FR')} à ${new Date(scheduledDateTime).toLocaleTimeString('fr-FR')}`,
       });
       
       // Réinitialiser le formulaire et fermer la modale
@@ -90,6 +104,9 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
       setIsLoading(false);
     }
   };
+
+  // Calculer la date minimum (aujourd'hui) pour le sélecteur de date
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -110,6 +127,11 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
               disabled={isLoading}
               required
             />
+            {platforms.includes("Twitter") && content.length > 280 && (
+              <p className="text-xs text-red-500">
+                Attention: Votre message dépasse la limite de 280 caractères pour Twitter
+              </p>
+            )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -121,7 +143,7 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 disabled={isLoading}
-                min={new Date().toISOString().split('T')[0]}
+                min={today}
                 required
               />
             </div>

@@ -2,12 +2,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Facebook, Instagram, Linkedin, Plus, Twitter, RefreshCw, Calendar, Settings, Trash } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Plus, Twitter, RefreshCw, Calendar, Settings, Trash, HelpCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import AddSocialAccountModal from '@/components/social/AddSocialAccountModal';
 import SchedulePostModal from '@/components/social/SchedulePostModal';
+import { Link } from 'react-router-dom';
 
 const Social = () => {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -68,10 +69,18 @@ const Social = () => {
           <h1 className="text-3xl font-bold tracking-tight">Réseaux Sociaux</h1>
           <p className="text-muted-foreground">Gérez vos comptes sociaux et planifiez vos publications.</p>
         </div>
-        <Button onClick={() => setIsAddAccountModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Ajouter un réseau
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/dashboard/api-keys-help">
+              <HelpCircle className="mr-2 h-4 w-4" />
+              Guide de configuration
+            </Link>
+          </Button>
+          <Button onClick={() => setIsAddAccountModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Ajouter un réseau
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="accounts" className="space-y-4">

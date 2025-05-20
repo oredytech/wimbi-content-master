@@ -21,6 +21,8 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import RequireAuth from "./components/auth/RequireAuth";
 import { AppProvider } from "./context/AppContext";
+import OAuthCallback from "./pages/auth/OAuthCallback";
+import ApiKeysHelp from "./pages/dashboard/ApiKeysHelp";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,7 @@ const App = () => (
             {/* Auth routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/auth/callback/:platform" element={<OAuthCallback />} />
             
             {/* Protected dashboard routes */}
             <Route
@@ -59,6 +62,7 @@ const App = () => (
               <Route path="wordpress" element={<WordPress />} />
               <Route path="social" element={<Social />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="api-keys-help" element={<ApiKeysHelp />} />
             </Route>
 
             {/* Catch-all route */}

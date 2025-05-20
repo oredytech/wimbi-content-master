@@ -2,11 +2,10 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/context/AppContext";
+import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { initiateOAuthFlow } from '@/services/oauthService';
 
 interface AddSocialAccountModalProps {
   isOpen: boolean;
@@ -14,69 +13,37 @@ interface AddSocialAccountModalProps {
 }
 
 const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, onClose }) => {
-  const [socialType, setSocialType] = useState<"Facebook" | "Twitter" | "Instagram" | "LinkedIn" | "">("");
-  const [username, setUsername] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<string | null>(null);
   const { toast } = useToast();
-  const { addSocialAccount } = useAppContext();
 
   const socialPlatforms = [
-    { name: "Facebook", color: "bg-blue-600" },
-    { name: "Twitter", color: "bg-sky-500" },
-    { name: "Instagram", color: "bg-pink-600" },
-    { name: "LinkedIn", color: "bg-blue-700" },
+    { id: "facebook", name: "Facebook", icon: Facebook, color: "bg-blue-600", buttonColor: "bg-blue-600 hover:bg-blue-700" },
+    { id: "twitter", name: "Twitter", icon: Twitter, color: "bg-sky-500", buttonColor: "bg-sky-500 hover:bg-sky-600" },
+    { id: "instagram", name: "Instagram", icon: Instagram, color: "bg-pink-600", buttonColor: "bg-pink-600 hover:bg-pink-700" },
+    { id: "linkedin", name: "LinkedIn", icon: Linkedin, color: "bg-blue-700", buttonColor: "bg-blue-700 hover:bg-blue-800" },
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConnectPlatform = async (platformId: string) => {
+    setIsLoading(platformId);
     
-    if (!socialType || !username.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      setIsLoading(true);
+      const result = initiateOAuthFlow(platformId as "facebook" | "twitter" | "instagram" | "linkedin");
       
-      // Simuler une API call pour connecter le réseau social
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const platform = socialPlatforms.find(p => p.name === socialType);
-      
-      if (!platform) {
-        throw new Error("Plateforme non prise en charge");
+      if (!result.success) {
+        toast({
+          title: "Erreur de connexion",
+          description: result.error || "Impossible de démarrer le processus d'authentification",
+          variant: "destructive",
+        });
       }
-
-      // Ajouter le compte de réseau social
-      addSocialAccount({
-        name: socialType as any,
-        username,
-        connected: true,
-        icon: socialType,
-        color: platform.color,
-      });
-
-      toast({
-        title: "Compte ajouté",
-        description: `Le compte ${socialType} a été connecté avec succès`,
-      });
-      
-      // Réinitialiser le formulaire et fermer la modale
-      setSocialType("");
-      setUsername("");
-      onClose();
     } catch (error) {
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de connecter le compte",
+        description: error instanceof Error ? error.message : "Erreur lors de la connexion au réseau social",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsLoading(null);
     }
   };
 
@@ -87,54 +54,42 @@ const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, o
           <DialogTitle>Ajouter un réseau social</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="social-type">Plateforme</Label>
-            <Select 
-              value={socialType} 
-              onValueChange={(value) => setSocialType(value as any)}
-              disabled={isLoading}
-            >
-              <SelectTrigger id="social-type">
-                <SelectValue placeholder="Sélectionnez une plateforme" />
-              </SelectTrigger>
-              <SelectContent>
-                {socialPlatforms.map((platform) => (
-                  <SelectItem key={platform.name} value={platform.name}>
-                    {platform.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="py-4 space-y-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            Connectez vos comptes de réseaux sociaux pour publier et gérer votre contenu directement depuis WimbiMaster.
+          </p>
+          
+          <div className="grid gap-3">
+            {socialPlatforms.map((platform) => {
+              const Icon = platform.icon;
+              return (
+                <Button
+                  key={platform.id}
+                  className={`justify-start ${platform.buttonColor} text-white`}
+                  onClick={() => handleConnectPlatform(platform.id)}
+                  disabled={isLoading !== null}
+                >
+                  <Icon className="h-5 w-5 mr-2" />
+                  <span className="flex-1 text-left">
+                    {isLoading === platform.id ? 
+                      `Connexion à ${platform.name} en cours...` : 
+                      `Se connecter avec ${platform.name}`}
+                  </span>
+                </Button>
+              );
+            })}
           </div>
           
-          <div className="grid gap-2">
-            <Label htmlFor="username">Nom d'utilisateur</Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={
-                socialType === "Facebook" ? "entreprise.page" :
-                socialType === "Twitter" ? "@entreprise" :
-                socialType === "Instagram" ? "@entreprise" :
-                socialType === "LinkedIn" ? "Nom de l'entreprise" :
-                "Nom d'utilisateur"
-              }
-              disabled={isLoading}
-              required
-            />
+          <div className="pt-2 text-xs text-muted-foreground">
+            <p>En vous connectant, vous autorisez WimbiMaster à accéder aux données nécessaires pour gérer vos publications sur ces réseaux.</p>
           </div>
-          
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={isLoading || !socialType}>
-              {isLoading ? "Connexion en cours..." : "Connecter le compte"}
-            </Button>
-          </DialogFooter>
-        </form>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isLoading !== null}>
+            Fermer
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
