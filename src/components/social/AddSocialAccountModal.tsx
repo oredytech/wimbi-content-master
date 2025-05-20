@@ -4,8 +4,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/context/AppContext";
-import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, AlertTriangle, ExternalLink } from 'lucide-react';
 import { initiateOAuthFlow } from '@/services/oauthService';
+import { SocialPlatform } from '@/config/socialConfig';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Link } from "react-router-dom";
 
 interface AddSocialAccountModalProps {
   isOpen: boolean;
@@ -27,13 +30,18 @@ const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, o
     setIsLoading(platformId);
     
     try {
-      const result = initiateOAuthFlow(platformId as "facebook" | "twitter" | "instagram" | "linkedin");
+      const result = initiateOAuthFlow(platformId as SocialPlatform);
       
       if (!result.success) {
         toast({
           title: "Erreur de connexion",
           description: result.error || "Impossible de démarrer le processus d'authentification",
           variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Connexion en cours",
+          description: `Veuillez suivre les instructions dans la fenêtre qui s'est ouverte pour vous connecter à ${platformId}.`,
         });
       }
     } catch (error) {
@@ -42,6 +50,7 @@ const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, o
         description: error instanceof Error ? error.message : "Erreur lors de la connexion au réseau social",
         variant: "destructive",
       });
+      console.error("[Social] Erreur de connexion:", error);
     } finally {
       setIsLoading(null);
     }
@@ -58,6 +67,16 @@ const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, o
           <p className="text-sm text-muted-foreground mb-4">
             Connectez vos comptes de réseaux sociaux pour publier et gérer votre contenu directement depuis WimbiMaster.
           </p>
+          
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
+              Assurez-vous d'avoir configuré correctement vos applications dans les plateformes respectives. 
+              <Link to="/dashboard/api-keys-help" className="ml-1 text-blue-600 hover:underline inline-flex items-center" onClick={onClose}>
+                Voir le guide de configuration <ExternalLink className="h-3 w-3 ml-1" />
+              </Link>
+            </AlertDescription>
+          </Alert>
           
           <div className="grid gap-3">
             {socialPlatforms.map((platform) => {

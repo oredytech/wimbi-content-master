@@ -1,20 +1,31 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Facebook, Instagram, Linkedin, Plus, Twitter, RefreshCw, Calendar, Settings, Trash, HelpCircle } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Plus, Twitter, RefreshCw, Calendar, Settings, Trash, HelpCircle, LogOut } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import AddSocialAccountModal from '@/components/social/AddSocialAccountModal';
 import SchedulePostModal from '@/components/social/SchedulePostModal';
 import { Link } from 'react-router-dom';
+import { removeAccessToken, getAccessToken } from '@/services/oauthService';
+import { SocialPlatform } from '@/config/socialConfig';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Social = () => {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [isSchedulePostModalOpen, setIsSchedulePostModalOpen] = useState(false);
   const { socialAccounts, scheduledPosts, toggleSocialConnection, removeSocialAccount, removeScheduledPost } = useAppContext();
   const { toast } = useToast();
+  const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
+
+  // Vérifier les tokens réellement présents au chargement
+  useEffect(() => {
+    const platforms: SocialPlatform[] = ["facebook", "twitter", "instagram", "linkedin"];
+    const connected = platforms.filter(platform => getAccessToken(platform) !== null);
+    setConnectedAccounts(connected);
+  }, []);
 
   const getIconComponent = (name: string) => {
     switch (name) {
@@ -31,9 +42,16 @@ const Social = () => {
     }
   };
 
-  const handleRemoveAccount = (id: string, name: string) => {
+  const handleRemoveAccount = (id: string, name: string, platform: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer le compte ${name} ?`)) {
+      // Supprimer le token d'accès
+      removeAccessToken(platform.toLowerCase() as SocialPlatform);
+      
+      // Supprimer le compte de l'état global
       removeSocialAccount(id);
+      
+      // Mettre à jour la liste des comptes connectés
+      setConnectedAccounts(prev => prev.filter(p => p !== platform.toLowerCase()));
       
       toast({
         title: "Compte supprimé",
@@ -42,13 +60,21 @@ const Social = () => {
     }
   };
 
-  const handleToggleConnection = (id: string, name: string, connected: boolean) => {
-    toggleSocialConnection(id);
-    
-    toast({
-      title: connected ? "Compte déconnecté" : "Compte connecté",
-      description: `Le compte ${name} a été ${connected ? "déconnecté" : "connecté"}`,
-    });
+  const handleToggleConnection = (id: string, name: string, connected: boolean, platform: string) => {
+    if (connected) {
+      // Déconnexion
+      removeAccessToken(platform.toLowerCase() as SocialPlatform);
+      toggleSocialConnection(id);
+      setConnectedAccounts(prev => prev.filter(p => p !== platform.toLowerCase()));
+      
+      toast({
+        title: "Compte déconnecté",
+        description: `Le compte ${name} a été déconnecté`,
+      });
+    } else {
+      // Tentative de reconnexion
+      setIsAddAccountModalOpen(true);
+    }
   };
 
   const handleRemovePost = (id: string) => {
@@ -94,6 +120,14 @@ const Social = () => {
           {socialAccounts.length > 0 ? (
             socialAccounts.map((account) => {
               const IconComponent = getIconComponent(account.name);
+              const platformName = account.name.toLowerCase();
+              const hasToken = connectedAccounts.includes(platformName);
+              
+              // Si le statut connecté ne correspond pas à la présence d'un token, on met à jour
+              if (account.connected !== hasToken) {
+                toggleSocialConnection(account.id);
+              }
+              
               return (
                 <Card key={account.id}>
                   <CardHeader className="pb-3">
@@ -104,8 +138,8 @@ const Social = () => {
                         </div>
                         <CardTitle>{account.name}</CardTitle>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${account.connected ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                        {account.connected ? "Connecté" : "Déconnecté"}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${hasToken ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                        {hasToken ? "Connecté" : "Déconnecté"}
                       </span>
                     </div>
                     <CardDescription>
@@ -113,22 +147,22 @@ const Social = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardFooter className="border-t pt-3 flex justify-between">
-                    {account.connected ? (
+                    {hasToken ? (
                       <>
                         <div className="flex gap-2">
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => handleToggleConnection(account.id, account.name, account.connected)}
+                            onClick={() => handleToggleConnection(account.id, account.name, true, platformName)}
                           >
-                            <Settings className="mr-1 h-3.5 w-3.5" />
+                            <LogOut className="mr-1 h-3.5 w-3.5" />
                             Déconnecter
                           </Button>
                           <Button 
                             variant="outline" 
                             size="sm" 
                             className="text-red-600 hover:text-red-700"
-                            onClick={() => handleRemoveAccount(account.id, account.name)}
+                            onClick={() => handleRemoveAccount(account.id, account.name, platformName)}
                           >
                             <Trash className="mr-1 h-3.5 w-3.5" />
                             Supprimer
@@ -142,7 +176,7 @@ const Social = () => {
                     ) : (
                       <Button 
                         className="w-full"
-                        onClick={() => handleToggleConnection(account.id, account.name, account.connected)}
+                        onClick={() => setIsAddAccountModalOpen(true)}
                       >
                         Connecter
                       </Button>
@@ -163,6 +197,35 @@ const Social = () => {
                   <Plus className="mr-2 h-4 w-4" />
                   Ajouter un réseau social
                 </Button>
+              </CardContent>
+            </Card>
+          )}
+          
+          {socialAccounts.length > 0 && !socialAccounts.some(a => a.connected) && (
+            <Card className="md:col-span-2 bg-blue-50 border-blue-200">
+              <CardContent className="p-4">
+                <Alert className="bg-transparent border-0 p-0">
+                  <div className="flex items-center">
+                    <div className="mr-2 rounded-full bg-blue-100 p-1">
+                      <HelpCircle className="h-4 w-4 text-blue-700" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-800">Connexion requise</h4>
+                      <p className="text-sm text-blue-700">
+                        Vous devez connecter au moins un réseau social pour pouvoir publier du contenu.
+                      </p>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="mt-2 text-blue-700 border-blue-300"
+                        onClick={() => setIsAddAccountModalOpen(true)}
+                      >
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Connecter un réseau social
+                      </Button>
+                    </div>
+                  </div>
+                </Alert>
               </CardContent>
             </Card>
           )}

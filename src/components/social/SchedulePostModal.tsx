@@ -7,8 +7,11 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/context/AppContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { Facebook, Twitter, Instagram, Linkedin, Upload, File, X, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SocialPost, SocialPublishingService } from "@/services/socialPublishingService";
+import { SocialPlatform } from "@/config/socialConfig";
 
 interface SchedulePostModalProps {
   isOpen: boolean;
@@ -17,10 +20,12 @@ interface SchedulePostModalProps {
 
 const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }) => {
   const [content, setContent] = useState("");
+  const [link, setLink] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [platforms, setPlatforms] = useState<string[]>([]);
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const { toast } = useToast();
   const { addScheduledPost, socialAccounts } = useAppContext();
 
@@ -28,7 +33,7 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
     .filter(account => account.connected)
     .map(account => ({
       id: account.id,
-      name: account.name,
+      name: account.name as SocialPlatform,
       icon: account.name === "Facebook" ? Facebook :
             account.name === "Twitter" ? Twitter :
             account.name === "Instagram" ? Instagram :
@@ -36,7 +41,7 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
       color: account.color.replace('bg-', 'text-')
     }));
 
-  const handleTogglePlatform = (platformName: string) => {
+  const handleTogglePlatform = (platformName: SocialPlatform) => {
     setPlatforms(prev => 
       prev.includes(platformName)
         ? prev.filter(p => p !== platformName)
@@ -44,55 +49,147 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
     );
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setMediaFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const validateForm = (): boolean => {
+    if (!content.trim()) {
+      toast({
+        title: "Contenu requis",
+        description: "Veuillez rédiger le contenu de votre publication.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (platforms.length === 0) {
+      toast({
+        title: "Plateforme requise",
+        description: "Veuillez sélectionner au moins une plateforme pour la publication.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (platforms.includes("twitter") && content.length > 280) {
+      toast({
+        title: "Contenu trop long",
+        description: "Le contenu dépasse la limite de 280 caractères pour Twitter.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (platforms.includes("instagram") && mediaFiles.length === 0) {
+      toast({
+        title: "Image requise",
+        description: "Une publication Instagram nécessite au moins une image.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Vérifier la date si elle est spécifiée
+    if (date && time) {
+      const scheduledDateTime = new Date(`${date}T${time}`);
+      if (scheduledDateTime <= new Date()) {
+        toast({
+          title: "Date invalide",
+          description: "La date de publication doit être dans le futur.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!content.trim() || !date || !time || platforms.length === 0) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs et sélectionner au moins une plateforme",
-        variant: "destructive",
-      });
+    if (!validateForm()) {
       return;
     }
 
     try {
       setIsLoading(true);
       
-      // Créer une date complète à partir de la date et de l'heure
-      const scheduledDateTime = new Date(`${date}T${time}`);
-      
-      // Vérifier si la date est dans le futur
-      if (scheduledDateTime <= new Date()) {
-        throw new Error("La date de publication doit être dans le futur");
+      // Préparer les données de publication
+      const post: SocialPost = {
+        content,
+        platforms: platforms.map(p => p.toLowerCase() as SocialPlatform),
+        link: link || undefined,
+        mediaUrls: mediaFiles.length > 0 
+          ? mediaFiles.map(file => URL.createObjectURL(file)) 
+          : undefined
+      };
+
+      // Créer une date complète si date et heure sont spécifiées
+      let scheduledDateTime: Date | undefined;
+      if (date && time) {
+        scheduledDateTime = new Date(`${date}T${time}`);
+        post.scheduledDate = scheduledDateTime;
       }
 
-      // Dans une implémentation réelle, nous enverrions une requête à un serveur backend
-      // qui stockerait cette tâche et l'exécuterait au moment voulu
-      console.log("[Publication] Planification d'une publication pour:", scheduledDateTime);
-      console.log("[Publication] Contenu:", content);
-      console.log("[Publication] Plateformes:", platforms);
+      console.log("[Publication] Préparation de la publication:", post);
       
-      // Pour l'instant, on simule une requête au serveur
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Ajouter localement la publication planifiée
-      addScheduledPost({
-        content,
-        date: scheduledDateTime.toISOString(),
-        platforms,
-      });
+      if (scheduledDateTime && scheduledDateTime > new Date()) {
+        // Planifier la publication pour plus tard
+        console.log("[Publication] Planification pour:", scheduledDateTime.toISOString());
+        
+        // Ajouter localement la publication planifiée
+        addScheduledPost({
+          content,
+          date: scheduledDateTime.toISOString(),
+          platforms: platforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)),
+        });
 
-      toast({
-        title: "Publication planifiée",
-        description: `La publication a été planifiée pour le ${new Date(scheduledDateTime).toLocaleDateString('fr-FR')} à ${new Date(scheduledDateTime).toLocaleTimeString('fr-FR')}`,
-      });
+        toast({
+          title: "Publication planifiée",
+          description: `La publication a été planifiée pour le ${scheduledDateTime.toLocaleDateString('fr-FR')} à ${scheduledDateTime.toLocaleTimeString('fr-FR')}`,
+        });
+      } else {
+        // Publier immédiatement
+        console.log("[Publication] Publication immédiate");
+        const results = await SocialPublishingService.publishToSocialMedia(post);
+        
+        // Analyser les résultats
+        const successful = results.filter(r => r.success);
+        const failed = results.filter(r => !r.success);
+        
+        if (successful.length > 0) {
+          toast({
+            title: "Publication réussie",
+            description: `Publié avec succès sur ${successful.length} plateforme(s)`,
+          });
+        }
+        
+        if (failed.length > 0) {
+          toast({
+            title: "Problèmes de publication",
+            description: `Échec sur ${failed.length} plateforme(s). Vérifiez les détails.`,
+            variant: "destructive",
+          });
+          console.error("[Publication] Échecs:", failed);
+        }
+      }
       
       // Réinitialiser le formulaire et fermer la modale
       setContent("");
+      setLink("");
       setDate("");
       setTime("");
       setPlatforms([]);
+      setMediaFiles([]);
       onClose();
     } catch (error) {
       toast({
@@ -100,6 +197,7 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
         description: error instanceof Error ? error.message : "Impossible de planifier la publication",
         variant: "destructive",
       });
+      console.error("[Publication] Erreur:", error);
     } finally {
       setIsLoading(false);
     }
@@ -108,11 +206,14 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
   // Calculer la date minimum (aujourd'hui) pour le sélecteur de date
   const today = new Date().toISOString().split('T')[0];
 
+  // Vérifier si la publication peut être publiée immédiatement
+  const canPublishNow = platforms.length > 0 && content.trim() !== "";
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Planifier une publication</DialogTitle>
+          <DialogTitle>Créer une publication</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -127,16 +228,83 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
               disabled={isLoading}
               required
             />
-            {platforms.includes("Twitter") && content.length > 280 && (
-              <p className="text-xs text-red-500">
-                Attention: Votre message dépasse la limite de 280 caractères pour Twitter
-              </p>
+            {platforms.includes("twitter") && (
+              <div className="flex justify-between text-xs">
+                <span className={content.length > 280 ? "text-red-500" : "text-muted-foreground"}>
+                  {content.length}/280 caractères
+                </span>
+                {content.length > 280 && (
+                  <span className="text-red-500 font-medium">
+                    Dépassement pour Twitter: {content.length - 280} caractères
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="post-link">Lien (optionnel)</Label>
+            <Input
+              id="post-link"
+              type="url"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="https://example.com/article"
+              disabled={isLoading}
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label>Médias (optionnel)</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="media-upload"
+                type="file"
+                onChange={handleFileChange}
+                disabled={isLoading}
+                className="hidden"
+                accept="image/*,video/*"
+                multiple
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => document.getElementById('media-upload')?.click()}
+                disabled={isLoading}
+              >
+                <Upload className="h-4 w-4 mr-2" /> Ajouter média
+              </Button>
+              {platforms.includes("instagram") && mediaFiles.length === 0 && (
+                <span className="text-xs text-red-500">
+                  Instagram nécessite au moins une image
+                </span>
+              )}
+            </div>
+            
+            {mediaFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {mediaFiles.map((file, index) => (
+                  <div key={index} className="relative">
+                    <div className="border rounded-md p-2 flex items-center gap-2 bg-muted">
+                      <File className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs truncate max-w-[100px]">{file.name}</span>
+                      <button
+                        type="button"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleRemoveFile(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="post-date">Date</Label>
+              <Label htmlFor="post-date">Date (optionnel)</Label>
               <Input
                 id="post-date"
                 type="date"
@@ -144,21 +312,28 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
                 onChange={(e) => setDate(e.target.value)}
                 disabled={isLoading}
                 min={today}
-                required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="post-time">Heure</Label>
+              <Label htmlFor="post-time">Heure (optionnel)</Label>
               <Input
                 id="post-time"
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 disabled={isLoading}
-                required
               />
             </div>
           </div>
+          
+          {(!date || !time) && (
+            <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+              <AlertTriangle className="h-4 w-4 text-blue-800" />
+              <AlertDescription>
+                Sans date ni heure, la publication sera immédiate si vous cliquez sur "Publier maintenant".
+              </AlertDescription>
+            </Alert>
+          )}
           
           <div className="grid gap-2">
             <Label>Plateformes</Label>
@@ -196,12 +371,21 @@ const SchedulePostModal: React.FC<SchedulePostModalProps> = ({ isOpen, onClose }
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Annuler
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isLoading || socialPlatforms.length === 0}
-            >
-              {isLoading ? "Planification en cours..." : "Planifier la publication"}
-            </Button>
+            {date && time ? (
+              <Button 
+                type="submit" 
+                disabled={isLoading || socialPlatforms.length === 0 || !content.trim()}
+              >
+                {isLoading ? "Planification en cours..." : "Planifier la publication"}
+              </Button>
+            ) : (
+              <Button 
+                type="submit" 
+                disabled={isLoading || !canPublishNow}
+              >
+                {isLoading ? "Publication en cours..." : "Publier maintenant"}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
