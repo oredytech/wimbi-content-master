@@ -23,6 +23,13 @@ export const socialConfig = {
     redirectUri: `${window.location.origin}/auth/callback/linkedin`,
     scopes: ["r_liteprofile", "r_emailaddress", "w_member_social"],
   },
+  instagram: {
+    // Utilise les mêmes clés que Facebook mais avec des scopes différents
+    appId: import.meta.env.VITE_FACEBOOK_APP_ID || "1454263535543676",
+    apiKey: import.meta.env.VITE_FACEBOOK_API_KEY || "50c7851bff54bab8fd64d2d6cbf79dfc",
+    redirectUri: `${window.location.origin}/auth/callback/instagram`,
+    scopes: ["instagram_basic", "instagram_content_publish", "pages_show_list", "pages_read_engagement"],
+  },
   wordpress: {
     // Configuration générique, chaque site WordPress aura ses propres credentials
     apiBase: "/wp-json/wp/v2",
@@ -32,12 +39,3 @@ export const socialConfig = {
 
 // Types pour les différentes plateformes
 export type SocialPlatform = "facebook" | "twitter" | "instagram" | "linkedin";
-export type SocialPlatformConfig = typeof socialConfig[keyof typeof socialConfig];
-
-// Interface pour un token d'accès
-export interface AccessToken {
-  value: string;
-  expiresAt: number; // timestamp expiration
-  refreshToken?: string;
-  tokenType?: string;
-}

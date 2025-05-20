@@ -1,0 +1,44 @@
+
+import { AccessToken } from "@/services/oauth/types";
+import { SocialPost, PublishResult } from "../types";
+
+/**
+ * Publie sur Twitter
+ * @param accessToken Token d'accès
+ * @param post Données de la publication
+ * @returns Résultat de la publication
+ */
+export const publishToTwitter = async (accessToken: AccessToken, post: SocialPost): Promise<PublishResult> => {
+  try {
+    console.log("[Social] Publication sur Twitter:", post);
+    
+    // Vérifier la longueur du tweet
+    if (post.content.length > 280) {
+      return {
+        success: false,
+        platform: "twitter",
+        error: "Le contenu dépasse la limite de 280 caractères"
+      };
+    }
+    
+    // Dans une implémentation réelle, nous ferions une requête à l'API Twitter
+    // POST /2/tweets avec le token d'accès
+    
+    // Pour la démo, on simule une publication réussie
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
+    return {
+      success: true,
+      platform: "twitter",
+      postId: `twitter_${Date.now()}`,
+      postUrl: `https://twitter.com/user/status/${Date.now()}`
+    };
+  } catch (error) {
+    console.error("[Social] Erreur lors de la publication sur Twitter:", error);
+    return {
+      success: false,
+      platform: "twitter",
+      error: error instanceof Error ? error.message : "Erreur lors de la publication sur Twitter"
+    };
+  }
+};
