@@ -1,17 +1,47 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Globe, Plus, ExternalLink, Settings, RefreshCw } from 'lucide-react';
+import { Globe, Plus, ExternalLink, Settings, RefreshCw, Trash } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAppContext } from '@/context/AppContext';
+import { useToast } from '@/hooks/use-toast';
+import AddWordPressSiteModal from '@/components/wordpress/AddWordPressSiteModal';
 
 const WordPress = () => {
-  // Données fictives pour les sites WordPress
-  const sites = [
-    { id: 1, name: "Blog Marketing", url: "https://blog-marketing.com", status: "connected", posts: 24 },
-    { id: 2, name: "Site E-commerce", url: "https://mon-ecommerce.com", status: "connected", posts: 12 },
-    { id: 3, name: "Site Corporate", url: "https://entreprise.com", status: "connected", posts: 8 },
-  ];
+  const [isAddSiteModalOpen, setIsAddSiteModalOpen] = useState(false);
+  const { wordpressSites, removeWordPressSite, updateWordPressSite } = useAppContext();
+  const { toast } = useToast();
+
+  const handleSyncSite = (siteId: string, siteName: string) => {
+    toast({
+      title: "Synchronisation en cours",
+      description: `Synchronisation du site ${siteName}...`,
+    });
+
+    // Simuler une synchronisation
+    setTimeout(() => {
+      updateWordPressSite(siteId, {
+        lastSync: new Date().toISOString()
+      });
+
+      toast({
+        title: "Synchronisation terminée",
+        description: `Le site ${siteName} a été synchronisé avec succès`,
+      });
+    }, 2000);
+  };
+
+  const handleRemoveSite = (siteId: string, siteName: string) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le site ${siteName} ?`)) {
+      removeWordPressSite(siteId);
+      
+      toast({
+        title: "Site supprimé",
+        description: `Le site ${siteName} a été supprimé`,
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -20,7 +50,7 @@ const WordPress = () => {
           <h1 className="text-3xl font-bold tracking-tight">Sites WordPress</h1>
           <p className="text-muted-foreground">Connectez et gérez vos sites WordPress.</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsAddSiteModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Connecter un site
         </Button>
@@ -33,55 +63,73 @@ const WordPress = () => {
         </TabsList>
         
         <TabsContent value="sites" className="space-y-4">
-          {sites.map((site) => (
-            <Card key={site.id}>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-blue-600" />
-                    <CardTitle>{site.name}</CardTitle>
+          {wordpressSites.length > 0 ? (
+            wordpressSites.map((site) => (
+              <Card key={site.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-blue-600" />
+                      <CardTitle>{site.name}</CardTitle>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {site.status === 'connected' ? 'Connecté' : 'Déconnecté'}
+                    </span>
                   </div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Connecté
-                  </span>
-                </div>
-                <CardDescription>
-                  <a href={site.url} target="_blank" rel="noopener noreferrer" className="flex items-center hover:underline">
-                    {site.url}
-                    <ExternalLink className="ml-1 h-3 w-3" />
-                  </a>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between text-sm">
-                  <div>
-                    <span className="font-medium">{site.posts}</span> articles publiés
+                  <CardDescription>
+                    <a href={site.url} target="_blank" rel="noopener noreferrer" className="flex items-center hover:underline">
+                      {site.url}
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between text-sm">
+                    <div>
+                      <span className="font-medium">{site.posts}</span> articles publiés
+                    </div>
+                    <div className="text-muted-foreground">
+                      Dernière synchronisation: {site.lastSync 
+                        ? new Date(site.lastSync).toLocaleString('fr-FR') 
+                        : "Jamais"
+                      }
+                    </div>
                   </div>
-                  <div className="text-muted-foreground">
-                    Dernière synchronisation: il y a 2 heures
+                </CardContent>
+                <CardFooter className="border-t pt-3 flex justify-between">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <Settings className="mr-1 h-3.5 w-3.5" />
+                      Paramètres
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-red-600 hover:text-red-700" 
+                      onClick={() => handleRemoveSite(site.id, site.name)}
+                    >
+                      <Trash className="mr-1 h-3.5 w-3.5" />
+                      Supprimer
+                    </Button>
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t pt-3 flex justify-between">
-                <Button variant="outline" size="sm">
-                  <Settings className="mr-1 h-3.5 w-3.5" />
-                  Paramètres
-                </Button>
-                <Button variant="outline" size="sm">
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />
-                  Synchroniser
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-          
-          {sites.length === 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleSyncSite(site.id, site.name)}
+                  >
+                    <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                    Synchroniser
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
             <Card>
               <CardContent className="p-8 text-center">
                 <Globe className="mx-auto h-12 w-12 text-muted-foreground opacity-30" />
                 <h3 className="mt-2 text-lg font-medium">Aucun site WordPress connecté</h3>
                 <p className="text-muted-foreground">Connectez un site WordPress pour commencer à publier du contenu.</p>
-                <Button className="mt-4">
+                <Button className="mt-4" onClick={() => setIsAddSiteModalOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Connecter un site WordPress
                 </Button>
@@ -132,6 +180,11 @@ const WordPress = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AddWordPressSiteModal 
+        isOpen={isAddSiteModalOpen} 
+        onClose={() => setIsAddSiteModalOpen(false)} 
+      />
     </div>
   );
 };

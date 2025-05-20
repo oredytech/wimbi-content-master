@@ -4,13 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { BarChart, Calendar, FileText, Globe, Plus, Share2, TrendingUp } from 'lucide-react';
+import { useAppContext } from '@/context/AppContext';
 
 const Dashboard = () => {
-  const recentPublications = [
-    { id: 1, title: "Les tendances marketing 2025", date: "2025-05-15", wordpress: 3, social: 4 },
-    { id: 2, title: "Comment optimiser son SEO", date: "2025-05-10", wordpress: 2, social: 3 },
-    { id: 3, title: "Guide des réseaux sociaux", date: "2025-05-05", wordpress: 5, social: 4 },
-  ];
+  const { wordpressSites, socialAccounts, scheduledPosts, recentPublications } = useAppContext();
+  
+  // Calculer le nombre de réseaux sociaux connectés
+  const connectedSocialAccounts = socialAccounts.filter(account => account.connected);
+  
+  // Calculer le nombre de sites WordPress connectés
+  const connectedWordPressSites = wordpressSites.length;
 
   return (
     <div className="space-y-8">
@@ -37,7 +40,7 @@ const Dashboard = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">28</div>
+            <div className="text-2xl font-bold">{recentPublications.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               +3 depuis le mois dernier
             </p>
@@ -52,9 +55,12 @@ const Dashboard = () => {
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            <div className="text-2xl font-bold">{connectedWordPressSites}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              +1 site depuis le mois dernier
+              {connectedWordPressSites > 0 
+                ? `${connectedWordPressSites} site${connectedWordPressSites > 1 ? 's' : ''} connecté${connectedWordPressSites > 1 ? 's' : ''}`
+                : "Aucun site connecté"
+              }
             </p>
           </CardContent>
         </Card>
@@ -67,9 +73,12 @@ const Dashboard = () => {
             <Share2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
+            <div className="text-2xl font-bold">{connectedSocialAccounts.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Facebook, Twitter, LinkedIn, Instagram
+              {connectedSocialAccounts.length > 0 
+                ? connectedSocialAccounts.map(account => account.name).join(', ')
+                : "Aucun réseau connecté"
+              }
             </p>
           </CardContent>
         </Card>
@@ -82,7 +91,7 @@ const Dashboard = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{scheduledPosts.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Pour les 7 prochains jours
             </p>
@@ -100,32 +109,40 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentPublications.map((pub) => (
-                <div key={pub.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <p className="font-medium">{pub.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(pub.date).toLocaleDateString('fr-FR', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center" title="Sites WordPress">
-                      <Globe className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span className="text-sm">{pub.wordpress}</span>
+            {recentPublications.length > 0 ? (
+              <div className="space-y-4">
+                {recentPublications.map((pub) => (
+                  <div key={pub.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                    <div>
+                      <p className="font-medium">{pub.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(pub.date).toLocaleDateString('fr-FR', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </p>
                     </div>
-                    <div className="flex items-center" title="Réseaux sociaux">
-                      <Share2 className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span className="text-sm">{pub.social}</span>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center" title="Sites WordPress">
+                        <Globe className="h-4 w-4 mr-1 text-muted-foreground" />
+                        <span className="text-sm">{pub.wordpress}</span>
+                      </div>
+                      <div className="flex items-center" title="Réseaux sociaux">
+                        <Share2 className="h-4 w-4 mr-1 text-muted-foreground" />
+                        <span className="text-sm">{pub.social}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="mx-auto h-12 w-12 text-muted-foreground opacity-30" />
+                <h3 className="mt-2 text-lg font-medium">Aucune publication</h3>
+                <p className="text-muted-foreground">Commencez à créer du contenu pour voir vos publications ici</p>
+              </div>
+            )}
             <div className="mt-4 text-center">
               <Link to="/dashboard/contents">
                 <Button variant="outline" size="sm">
@@ -169,17 +186,33 @@ const Dashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-              <h4 className="font-medium text-blue-800">Connectez plus de réseaux sociaux</h4>
-              <p className="text-blue-600 text-sm mt-1">
-                Augmentez votre portée en ajoutant tous vos réseaux sociaux à votre compte Wimbi Master.
-              </p>
-              <Link to="/dashboard/social" className="mt-2 inline-block">
-                <Button variant="outline" size="sm" className="text-blue-700 border-blue-200 hover:bg-blue-100">
-                  Connecter un réseau
-                </Button>
-              </Link>
-            </div>
+            {connectedSocialAccounts.length < 3 && (
+              <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                <h4 className="font-medium text-blue-800">Connectez plus de réseaux sociaux</h4>
+                <p className="text-blue-600 text-sm mt-1">
+                  Augmentez votre portée en ajoutant tous vos réseaux sociaux à votre compte Wimbi Master.
+                </p>
+                <Link to="/dashboard/social" className="mt-2 inline-block">
+                  <Button variant="outline" size="sm" className="text-blue-700 border-blue-200 hover:bg-blue-100">
+                    Connecter un réseau
+                  </Button>
+                </Link>
+              </div>
+            )}
+            
+            {connectedWordPressSites === 0 && (
+              <div className="bg-green-50 p-4 rounded-md border border-green-100">
+                <h4 className="font-medium text-green-800">Connectez votre site WordPress</h4>
+                <p className="text-green-600 text-sm mt-1">
+                  Liez votre site WordPress pour pouvoir publier facilement depuis Wimbi Master.
+                </p>
+                <Link to="/dashboard/wordpress" className="mt-2 inline-block">
+                  <Button variant="outline" size="sm" className="text-green-700 border-green-200 hover:bg-green-100">
+                    Connecter un site
+                  </Button>
+                </Link>
+              </div>
+            )}
             
             <div className="bg-purple-50 p-4 rounded-md border border-purple-100">
               <h4 className="font-medium text-purple-800">Activez la génération de titres par IA</h4>
