@@ -52,19 +52,31 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-lg border-t py-4 px-4 z-50">
           <div className="flex flex-col space-y-4">
-            <Link to="/features" className="text-gray-700 hover:text-wimbi py-2 transition-colors">
+            <Link 
+              to="/features" 
+              className="text-gray-700 hover:text-wimbi py-2 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
               Fonctionnalités
             </Link>
-            <Link to="/pricing" className="text-gray-700 hover:text-wimbi py-2 transition-colors">
+            <Link 
+              to="/pricing" 
+              className="text-gray-700 hover:text-wimbi py-2 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
               Tarification
             </Link>
-            <Link to="/about" className="text-gray-700 hover:text-wimbi py-2 transition-colors">
+            <Link 
+              to="/about" 
+              className="text-gray-700 hover:text-wimbi py-2 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
               À propos
             </Link>
-            <Link to="/login" className="w-full">
+            <Link to="/login" className="w-full" onClick={() => setIsMenuOpen(false)}>
               <Button variant="outline" className="w-full">Connexion</Button>
             </Link>
-            <Link to="/signup" className="w-full">
+            <Link to="/signup" className="w-full" onClick={() => setIsMenuOpen(false)}>
               <Button className="w-full">Essai Gratuit</Button>
             </Link>
           </div>
