@@ -13,6 +13,14 @@ interface AddWordPressSiteModalProps {
   onClose: () => void;
 }
 
+interface WordPressSiteBase {
+  name: string;
+  url: string;
+  status: "connected" | "disconnected";
+  posts: number;
+  lastSync: string;
+}
+
 const AddWordPressSiteModal: React.FC<AddWordPressSiteModalProps> = ({ isOpen, onClose }) => {
   const [url, setUrl] = useState("");
   const [username, setUsername] = useState("");
@@ -47,7 +55,7 @@ const AddWordPressSiteModal: React.FC<AddWordPressSiteModalProps> = ({ isOpen, o
       addWordPressSite({
         name: result.siteInfo.name,
         url: result.siteInfo.url,
-        status: result.siteInfo.status,
+        status: result.siteInfo.status === "error" ? "disconnected" : result.siteInfo.status,
         posts: result.siteInfo.posts,
         lastSync: result.siteInfo.lastSync,
       });

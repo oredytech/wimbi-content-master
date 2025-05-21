@@ -8,7 +8,7 @@ import { publishToLinkedin } from "./social/platformPublishers/linkedinPublisher
 import { publishToInstagram } from "./social/platformPublishers/instagramPublisher";
 
 // Réexporter les types
-export { SocialPost, PublishResult } from "./social/types";
+export type { SocialPost, PublishResult } from "./social/types";
 
 /**
  * Service pour la publication sur les réseaux sociaux

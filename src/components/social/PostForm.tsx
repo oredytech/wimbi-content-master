@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Facebook, Twitter, Instagram, Linkedin, Upload, File, X } from "lucide-react";
+import { Upload, File, X } from "lucide-react";
 import { SocialPlatform } from "@/config/socialConfig";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -19,9 +19,9 @@ interface PostFormProps {
   time: string;
   setTime: (time: string) => void;
   platforms: SocialPlatform[];
-  setPlatforms: (platforms: SocialPlatform[]) => void;
+  setPlatforms: React.Dispatch<React.SetStateAction<SocialPlatform[]>>;
   mediaFiles: File[];
-  setMediaFiles: (files: File[]) => void;
+  setMediaFiles: React.Dispatch<React.SetStateAction<File[]>>;
   isLoading: boolean;
   socialPlatforms: {
     id: string;

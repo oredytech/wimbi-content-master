@@ -8,7 +8,7 @@ import { connectWordPressSite as connectWordPressSiteInternal } from "./oauth/wo
 
 // Réexporter les fonctions et types importants
 export { getAccessToken, removeAccessToken, exchangeCodeForToken };
-export { AuthError, AccessToken } from "./oauth/types";
+export type { AuthError, AccessToken } from "./oauth/types";
 export { connectWordPressSite } from "./oauth/wordpressService";
 
 /**
