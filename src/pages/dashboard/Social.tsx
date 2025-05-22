@@ -2,13 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, HelpCircle, Calendar, Settings } from 'lucide-react';
+import { Plus, HelpCircle, Calendar } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import AddSocialAccountModal from '@/components/social/AddSocialAccountModal';
 import SchedulePostModal from '@/components/social/SchedulePostModal';
-import { Link } from 'react-router-dom';
 import { getAccessToken, removeAccessToken } from '@/services/oauthService';
 import { SocialPlatform } from '@/config/socialConfig';
 import SocialAccountList from './social/SocialAccountList';
@@ -87,16 +86,10 @@ const Social = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link to="/dashboard/api-keys-help">
+            <a href="https://help.wimbimaster.com/social-networks" target="_blank" rel="noopener noreferrer">
               <HelpCircle className="mr-2 h-4 w-4" />
               Guide d'utilisation
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/dashboard/api-keys-config">
-              <Settings className="mr-2 h-4 w-4" />
-              Configuration API
-            </Link>
+            </a>
           </Button>
           <Button onClick={() => setIsAddAccountModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -109,9 +102,7 @@ const Social = () => {
         <Alert className="bg-amber-50 border-amber-200">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
-            Vous n'avez pas encore connecté de réseaux sociaux. Vous devez d'abord configurer les API dans 
-            <Link to="/dashboard/api-keys-config" className="mx-1 font-medium text-blue-600 hover:underline">Configuration API</Link>
-            puis connecter vos comptes.
+            Vous n'avez pas encore connecté de réseaux sociaux. Connectez vos comptes pour commencer à planifier des publications.
           </AlertDescription>
         </Alert>
       )}

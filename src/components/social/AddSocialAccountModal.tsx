@@ -4,11 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/context/AppContext";
-import { Facebook, Twitter, Instagram, Linkedin, AlertTriangle, ExternalLink, Settings } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 import { initiateOAuthFlow } from '@/services/oauthService';
 import { SocialPlatform } from '@/config/socialConfig';
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Link } from "react-router-dom";
 
 interface AddSocialAccountModalProps {
   isOpen: boolean;
@@ -67,23 +65,6 @@ const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, o
           <p className="text-sm text-muted-foreground mb-4">
             Connectez vos comptes de réseaux sociaux pour publier et gérer votre contenu directement depuis WimbiMaster.
           </p>
-          
-          <Alert className="bg-amber-50 border-amber-200">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800 text-sm">
-              <p>Avant de vous connecter, assurez-vous d'avoir configuré correctement vos applications dans les tableaux de bord développeur des plateformes respectives.</p>
-              <div className="mt-2 flex gap-2">
-                <Link to="/dashboard/api-keys-config" className="text-blue-600 hover:underline inline-flex items-center text-sm" onClick={onClose}>
-                  <Settings className="h-3 w-3 mr-1" />
-                  Configurer les API
-                </Link>
-                <Link to="/dashboard/api-keys-help" className="text-blue-600 hover:underline inline-flex items-center text-sm" onClick={onClose}>
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Guide d'utilisation
-                </Link>
-              </div>
-            </AlertDescription>
-          </Alert>
           
           <div className="grid gap-3">
             {socialPlatforms.map((platform) => {
