@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, HelpCircle, Calendar } from 'lucide-react';
+import { Plus, HelpCircle, Calendar, Settings } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,8 @@ import SocialAccountList from './social/SocialAccountList';
 import EmptyState from './social/EmptyState';
 import ScheduledPostsList from './social/ScheduledPostsList';
 import AnalyticsTab from './social/AnalyticsTab';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 const Social = () => {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -87,7 +89,13 @@ const Social = () => {
           <Button variant="outline" asChild>
             <Link to="/dashboard/api-keys-help">
               <HelpCircle className="mr-2 h-4 w-4" />
-              Guide de configuration
+              Guide d'utilisation
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/dashboard/api-keys-config">
+              <Settings className="mr-2 h-4 w-4" />
+              Configuration API
             </Link>
           </Button>
           <Button onClick={() => setIsAddAccountModalOpen(true)}>
@@ -96,6 +104,17 @@ const Social = () => {
           </Button>
         </div>
       </div>
+
+      {connectedAccounts.length === 0 && (
+        <Alert className="bg-amber-50 border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            Vous n'avez pas encore connecté de réseaux sociaux. Vous devez d'abord configurer les API dans 
+            <Link to="/dashboard/api-keys-config" className="mx-1 font-medium text-blue-600 hover:underline">Configuration API</Link>
+            puis connecter vos comptes.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="accounts" className="space-y-4">
         <TabsList>

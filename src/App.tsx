@@ -1,77 +1,72 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Layout from "./components/layout/Layout";
-import DashboardLayout from "./components/layout/DashboardLayout";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/dashboard/Dashboard";
-import NewContent from "./pages/dashboard/NewContent";
-import Contents from "./pages/dashboard/Contents";
-import WordPress from "./pages/dashboard/WordPress";
-import Social from "./pages/dashboard/Social";
-import Settings from "./pages/dashboard/Settings";
-import Features from "./pages/Features";
-import Pricing from "./pages/Pricing";
-import About from "./pages/About";
-import NotFound from "./pages/NotFound";
-import RequireAuth from "./components/auth/RequireAuth";
-import { AppProvider } from "./context/AppContext";
-import OAuthCallback from "./pages/auth/OAuthCallback";
-import ApiKeysHelp from "./pages/dashboard/ApiKeysHelp";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
+import Layout from './components/layout/Layout';
+import DashboardLayout from './components/layout/DashboardLayout';
+import RequireAuth from './components/auth/RequireAuth';
 
-const queryClient = new QueryClient();
+// Pages
+import Home from './pages/Home';
+import About from './pages/About';
+import Features from './pages/Features';
+import Pricing from './pages/Pricing';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import NotFound from './pages/NotFound';
+import Index from './pages/Index';
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+// Dashboard Pages
+import Dashboard from './pages/dashboard/Dashboard';
+import WordPress from './pages/dashboard/WordPress';
+import Social from './pages/dashboard/Social';
+import Contents from './pages/dashboard/Contents';
+import NewContent from './pages/dashboard/NewContent';
+import Settings from './pages/dashboard/Settings';
+import ApiKeysHelp from './pages/dashboard/ApiKeysHelp';
+import ApiKeysConfig from './pages/dashboard/ApiKeysConfig';
+import OAuthCallback from './pages/auth/OAuthCallback';
+
+// Toaster
+import { Toaster } from './components/ui/toaster';
+
+import './App.css';
+
+function App() {
+  return (
     <AppProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes with Layout */}
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="features" element={<Features />} />
-              <Route path="pricing" element={<Pricing />} />
-              <Route path="about" element={<About />} />
-            </Route>
-            
-            {/* Auth routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/auth/callback/:platform" element={<OAuthCallback />} />
-            
-            {/* Protected dashboard routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <RequireAuth>
-                  <DashboardLayout />
-                </RequireAuth>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="new-content" element={<NewContent />} />
-              <Route path="contents" element={<Contents />} />
-              <Route path="wordpress" element={<WordPress />} />
-              <Route path="social" element={<Social />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="api-keys-help" element={<ApiKeysHelp />} />
-            </Route>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Index />} />
+            <Route path="home" element={<Home />} />
+            <Route path="about" element={<About />} />
+            <Route path="features" element={<Features />} />
+            <Route path="pricing" element={<Pricing />} />
+            <Route path="login" element={<Login />} />
+            <Route path="signup" element={<Signup />} />
+          </Route>
 
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+          {/* Route pour les callbacks OAuth */}
+          <Route path="/auth/callback/:platform" element={<OAuthCallback />} />
+          
+          {/* Dashboard protégé */}
+          <Route path="/dashboard" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+            <Route index element={<Dashboard />} />
+            <Route path="wordpress" element={<WordPress />} />
+            <Route path="social" element={<Social />} />
+            <Route path="contents" element={<Contents />} />
+            <Route path="new-content" element={<NewContent />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="api-keys-help" element={<ApiKeysHelp />} />
+            <Route path="api-keys-config" element={<ApiKeysConfig />} />
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster />
+      </BrowserRouter>
     </AppProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;

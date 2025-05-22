@@ -4,9 +4,11 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { exchangeCodeForToken } from '@/services/oauthService';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Loader2, CheckCircle, XCircle, Settings, RefreshCw } from 'lucide-react';
 import { SocialPlatform } from '@/config/socialConfig';
+import { Link } from 'react-router-dom';
 
 const OAuthCallback = () => {
   const { platform } = useParams<{ platform: string }>();
@@ -16,6 +18,7 @@ const OAuthCallback = () => {
   const { addSocialAccount } = useAppContext();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState("");
+  const [detailedError, setDetailedError] = useState("");
 
   useEffect(() => {
     const processOAuthCallback = async () => {
@@ -25,9 +28,9 @@ const OAuthCallback = () => {
         const code = params.get('code');
         const state = params.get('state');
         const error = params.get('error');
-        const errorDescription = params.get('error_description');
+        const errorDescription = params.get('error_description') || params.get('error_reason');
         
-        console.log(`[OAuth] Traitement du callback pour ${platform} avec code: ${code && 'présent'}, état: ${state && 'présent'}, erreur: ${error || 'aucune'}`);
+        console.log(`[OAuth] Traitement du callback pour ${platform} avec code: ${code ? 'présent' : 'absent'}, état: ${state ? 'présent' : 'absent'}, erreur: ${error || 'aucune'}`);
 
         // Vérifier les erreurs renvoyées par le fournisseur OAuth
         if (error) {
@@ -47,6 +50,11 @@ const OAuthCallback = () => {
 
         // Vérifier l'état pour prévenir les attaques CSRF
         const storedState = localStorage.getItem(`${platform}_oauth_state`);
+        if (!storedState) {
+          console.warn(`[OAuth] État non trouvé pour ${platform}`);
+          throw new Error("Session d'authentification expirée ou invalide");
+        }
+        
         if (state !== storedState) {
           console.error(`[OAuth] État invalide - attendu: ${storedState}, reçu: ${state}`);
           throw new Error("État OAuth invalide - possible tentative CSRF");
@@ -61,7 +69,7 @@ const OAuthCallback = () => {
           code
         );
 
-        console.log(`[OAuth] Token obtenu pour ${platform}:`, tokenResponse);
+        console.log(`[OAuth] Token obtenu pour ${platform}`);
 
         // Récupérer la couleur correspondant à la plateforme
         let color = "bg-gray-500";
@@ -71,20 +79,22 @@ const OAuthCallback = () => {
         switch (platform) {
           case 'facebook': 
             color = "bg-blue-600"; 
+            name = "Facebook";
             // Normalement, récupérer les infos de l'utilisateur via l'API
-            // const userInfo = await fetch(`https://graph.facebook.com/me?fields=name,email&access_token=${tokenResponse.access_token}`);
-            // username = userInfo.name;
             break;
           case 'twitter': 
             color = "bg-sky-500";
+            name = "Twitter";
             // Normalement, récupérer les infos de l'utilisateur via l'API
             break;
           case 'instagram': 
             color = "bg-pink-600";
+            name = "Instagram";
             // Normalement, récupérer les infos de l'utilisateur via l'API
             break;
           case 'linkedin': 
             color = "bg-blue-700";
+            name = "LinkedIn";
             // Normalement, récupérer les infos de l'utilisateur via l'API
             break;
         }
@@ -101,7 +111,7 @@ const OAuthCallback = () => {
         setStatus('success');
         toast({
           title: "Connexion réussie",
-          description: `Votre compte ${platform} a été connecté avec succès.`,
+          description: `Votre compte ${name} a été connecté avec succès.`,
         });
 
         // Rediriger vers la page des réseaux sociaux après un court délai
@@ -114,6 +124,15 @@ const OAuthCallback = () => {
         const message = error instanceof Error ? error.message : "Erreur inconnue";
         setErrorMessage(message);
         
+        // Fournir des conseils de dépannage basés sur l'erreur
+        if (message.includes("État OAuth invalide") || message.includes("Session d'authentification expirée")) {
+          setDetailedError("Votre session d'authentification a expiré ou a été interrompue. Veuillez réessayer de vous connecter.");
+        } else if (message.includes("access_denied") || message.includes("user_denied")) {
+          setDetailedError("Vous avez refusé l'autorisation. Pour connecter votre compte, vous devez accepter les permissions demandées.");
+        } else {
+          setDetailedError("Vérifiez que les paramètres de votre application sont correctement configurés dans le tableau de bord développeur.");
+        }
+        
         console.error(`[OAuth] Erreur lors du traitement du callback pour ${platform}:`, error);
         
         toast({
@@ -121,16 +140,15 @@ const OAuthCallback = () => {
           description: message,
           variant: "destructive",
         });
-
-        // Rediriger vers la page des réseaux sociaux après un court délai même en cas d'erreur
-        setTimeout(() => {
-          navigate("/dashboard/social");
-        }, 3000);
       }
     };
 
     processOAuthCallback();
   }, [location, platform, navigate, addSocialAccount, toast]);
+
+  const handleRetry = () => {
+    navigate('/dashboard/social');
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
@@ -157,10 +175,25 @@ const OAuthCallback = () => {
               <XCircle className="h-8 w-8 mx-auto text-red-600" />
               <h2 className="mt-4 text-xl font-semibold">Erreur de connexion</h2>
               <p className="mt-2 text-red-600">{errorMessage}</p>
-              <p className="mt-1">Vous allez être redirigé vers votre tableau de bord...</p>
+              {detailedError && <p className="mt-2">{detailedError}</p>}
             </>
           )}
         </CardContent>
+        
+        {status === 'error' && (
+          <CardFooter className="flex justify-center gap-4 pt-2 pb-6">
+            <Button variant="outline" onClick={handleRetry} className="flex items-center gap-1">
+              <RefreshCw className="h-4 w-4" />
+              Réessayer
+            </Button>
+            <Button asChild>
+              <Link to="/dashboard/api-keys-config" className="flex items-center gap-1">
+                <Settings className="h-4 w-4" />
+                Vérifier la configuration
+              </Link>
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

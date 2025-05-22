@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/context/AppContext";
-import { Facebook, Twitter, Instagram, Linkedin, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, AlertTriangle, ExternalLink, Settings } from 'lucide-react';
 import { initiateOAuthFlow } from '@/services/oauthService';
 import { SocialPlatform } from '@/config/socialConfig';
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -70,11 +70,18 @@ const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, o
           
           <Alert className="bg-amber-50 border-amber-200">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800">
-              Assurez-vous d'avoir configuré correctement vos applications dans les plateformes respectives. 
-              <Link to="/dashboard/api-keys-help" className="ml-1 text-blue-600 hover:underline inline-flex items-center" onClick={onClose}>
-                Voir le guide de configuration <ExternalLink className="h-3 w-3 ml-1" />
-              </Link>
+            <AlertDescription className="text-amber-800 text-sm">
+              <p>Avant de vous connecter, assurez-vous d'avoir configuré correctement vos applications dans les tableaux de bord développeur des plateformes respectives.</p>
+              <div className="mt-2 flex gap-2">
+                <Link to="/dashboard/api-keys-config" className="text-blue-600 hover:underline inline-flex items-center text-sm" onClick={onClose}>
+                  <Settings className="h-3 w-3 mr-1" />
+                  Configurer les API
+                </Link>
+                <Link to="/dashboard/api-keys-help" className="text-blue-600 hover:underline inline-flex items-center text-sm" onClick={onClose}>
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Guide d'utilisation
+                </Link>
+              </div>
             </AlertDescription>
           </Alert>
           
