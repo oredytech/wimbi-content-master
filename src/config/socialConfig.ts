@@ -27,7 +27,7 @@ export const socialConfig = {
     scopes: ["instagram_basic", "instagram_content_publish", "pages_show_list", "pages_read_engagement"],
   },
   wordpress: {
-    // Configuration générique, chaque site WordPress aura ses propres credentials
+    // Configuration générique simplifiée
     apiBase: "/wp-json/wp/v2",
     authBase: "/wp-json/jwt-auth/v1",
   }

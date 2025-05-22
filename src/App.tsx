@@ -22,8 +22,6 @@ import Social from './pages/dashboard/Social';
 import Contents from './pages/dashboard/Contents';
 import NewContent from './pages/dashboard/NewContent';
 import Settings from './pages/dashboard/Settings';
-import ApiKeysHelp from './pages/dashboard/ApiKeysHelp';
-import ApiKeysConfig from './pages/dashboard/ApiKeysConfig';
 import OAuthCallback from './pages/auth/OAuthCallback';
 
 // Toaster
@@ -59,8 +57,9 @@ function App() {
             <Route path="contents" element={<Contents />} />
             <Route path="new-content" element={<NewContent />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="api-keys-help" element={<ApiKeysHelp />} />
-            <Route path="api-keys-config" element={<ApiKeysConfig />} />
+            {/* Ces deux routes ont été supprimées */}
+            {/* <Route path="api-keys-help" element={<ApiKeysHelp />} /> */}
+            {/* <Route path="api-keys-config" element={<ApiKeysConfig />} /> */}
           </Route>
 
           {/* Route 404 - doit être en dernier */}
