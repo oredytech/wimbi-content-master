@@ -36,6 +36,7 @@ function App() {
     <AppProvider>
       <BrowserRouter>
         <Routes>
+          {/* Route principale avec layout public */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Index />} />
             <Route path="home" element={<Home />} />
@@ -49,8 +50,8 @@ function App() {
           {/* Route pour les callbacks OAuth */}
           <Route path="/auth/callback/:platform" element={<OAuthCallback />} />
           
-          {/* Dashboard protégé */}
-          <Route path="/dashboard" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+          {/* Dashboard protégé - la route est maintenant * pour matcher tous les sous-chemins */}
+          <Route path="/dashboard/*" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
             <Route index element={<Dashboard />} />
             <Route path="wordpress" element={<WordPress />} />
             <Route path="social" element={<Social />} />
@@ -61,6 +62,7 @@ function App() {
             <Route path="api-keys-config" element={<ApiKeysConfig />} />
           </Route>
 
+          {/* Route 404 - doit être en dernier */}
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
