@@ -1,7 +1,6 @@
 
 import { SocialPlatform } from "@/config/socialConfig";
-import { getAccessToken } from "./oauthService";
-import { SocialPost, PublishResult } from "./social/types";
+import { getAccessToken, getValidAccessToken } from "./oauthService";
 import { publishToFacebook } from "./social/platformPublishers/facebookPublisher";
 import { publishToTwitter } from "./social/platformPublishers/twitterPublisher";
 import { publishToLinkedin } from "./social/platformPublishers/linkedinPublisher";
@@ -33,31 +32,35 @@ export class SocialPublishingService {
     const results: PublishResult[] = [];
     
     for (const platform of post.platforms) {
-      const accessToken = getAccessToken(platform);
+      // Utiliser getValidAccessToken pour récupérer un token valide (rafraîchi si nécessaire)
+      const accessTokenValue = await getValidAccessToken(platform);
       
-      if (!accessToken) {
+      if (!accessTokenValue) {
         results.push({
           success: false,
           platform,
-          error: `Non connecté à ${platform}`
+          error: `Non connecté à ${platform} ou token expiré`
         });
         continue;
       }
+      
+      // Récupérer le token complet pour conserver le type
+      const accessToken = getAccessToken(platform);
       
       let result: PublishResult;
       
       switch (platform) {
         case "facebook":
-          result = await publishToFacebook(accessToken, post);
+          result = await publishToFacebook(accessToken!, post);
           break;
         case "twitter":
-          result = await publishToTwitter(accessToken, post);
+          result = await publishToTwitter(accessToken!, post);
           break;
         case "linkedin":
-          result = await publishToLinkedin(accessToken, post);
+          result = await publishToLinkedin(accessToken!, post);
           break;
         case "instagram":
-          result = await publishToInstagram(accessToken, post);
+          result = await publishToInstagram(accessToken!, post);
           break;
         default:
           result = {

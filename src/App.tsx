@@ -47,8 +47,9 @@ function App() {
             <Route path="signup" element={<Signup />} />
           </Route>
 
-          {/* Route pour les callbacks OAuth */}
+          {/* Routes pour les callbacks OAuth avec les nouveaux chemins */}
           <Route path="/auth/callback/:platform" element={<OAuthCallback />} />
+          <Route path="/auth/:platform/callback" element={<OAuthCallback />} />
           
           {/* Dashboard protégé - la route est maintenant * pour matcher tous les sous-chemins */}
           <Route path="/dashboard/*" element={<RequireAuth><DashboardLayout /></RequireAuth>}>

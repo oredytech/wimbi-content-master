@@ -3,7 +3,7 @@ import { SocialPlatform } from "@/config/socialConfig";
 import { OAuthResult } from "./oauth/types";
 import { generateAuthUrl } from "./oauth/authUrlService";
 import { getAccessToken, removeAccessToken } from "./oauth/storageService";
-import { exchangeCodeForToken } from "./oauth/tokenService";
+import { exchangeCodeForToken, refreshAccessToken } from "./oauth/tokenService";
 import { connectWordPressSite as connectWordPressSiteInternal } from "./oauth/wordpressService";
 
 // Réexporter les fonctions et types importants
@@ -41,4 +41,40 @@ export const initiateOAuthFlow = (platform: SocialPlatform): OAuthResult => {
       error: error instanceof Error ? error.message : `Erreur lors de la connexion à ${platform}`
     };
   }
+};
+
+/**
+ * Vérifie si le token d'accès est expiré et le rafraîchit si nécessaire
+ * @param {SocialPlatform} platform Plateforme sociale
+ * @returns {Promise<string|null>} Token d'accès valide ou null
+ */
+export const getValidAccessToken = async (platform: SocialPlatform): Promise<string|null> => {
+  const token = getAccessToken(platform);
+  
+  if (!token) {
+    return null;
+  }
+  
+  // Vérifier si le token est expiré
+  const now = Date.now();
+  const isExpired = token.expiresAt <= now;
+  
+  // Si le token est valide, le renvoyer directement
+  if (!isExpired) {
+    return token.value;
+  }
+  
+  // Si le token est expiré et qu'un refresh_token est disponible
+  if (token.refreshToken) {
+    try {
+      const newToken = await refreshAccessToken(platform, token.refreshToken);
+      return newToken.value;
+    } catch (error) {
+      console.error(`[OAuth] Échec du rafraîchissement du token pour ${platform}`, error);
+      return null;
+    }
+  }
+  
+  // Si le token est expiré et qu'il n'y a pas de refresh_token
+  return null;
 };

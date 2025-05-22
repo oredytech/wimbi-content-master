@@ -30,7 +30,19 @@ const OAuthCallback = () => {
         const error = params.get('error');
         const errorDescription = params.get('error_description') || params.get('error_reason');
         
-        console.log(`[OAuth] Traitement du callback pour ${platform} avec code: ${code ? 'présent' : 'absent'}, état: ${state ? 'présent' : 'absent'}, erreur: ${error || 'aucune'}`);
+        // Détermination de la plateforme correcte (extraire de la route)
+        let actualPlatform = platform;
+        
+        // Gestion des différents formats de routes
+        if (actualPlatform === 'callback') {
+          // Format /auth/callback/:platform
+          actualPlatform = location.pathname.split('/').pop();
+        } else if (location.pathname.includes(`/auth/${actualPlatform}/callback`)) {
+          // Format /auth/:platform/callback
+          // actualPlatform est déjà correct
+        }
+        
+        console.log(`[OAuth] Traitement du callback pour ${actualPlatform} avec code: ${code ? 'présent' : 'absent'}, état: ${state ? 'présent' : 'absent'}, erreur: ${error || 'aucune'}`);
 
         // Vérifier les erreurs renvoyées par le fournisseur OAuth
         if (error) {
@@ -38,20 +50,20 @@ const OAuthCallback = () => {
         }
 
         // S'assurer que nous avons un code et un platform valide
-        if (!code || !platform) {
+        if (!code || !actualPlatform) {
           throw new Error("Paramètres OAuth manquants");
         }
 
         // Vérifier que la plateforme est valide
         const validPlatforms = ['facebook', 'twitter', 'instagram', 'linkedin'];
-        if (!validPlatforms.includes(platform)) {
-          throw new Error(`Plateforme non supportée: ${platform}`);
+        if (!validPlatforms.includes(actualPlatform)) {
+          throw new Error(`Plateforme non supportée: ${actualPlatform}`);
         }
 
         // Vérifier l'état pour prévenir les attaques CSRF
-        const storedState = localStorage.getItem(`${platform}_oauth_state`);
+        const storedState = localStorage.getItem(`${actualPlatform}_oauth_state`);
         if (!storedState) {
-          console.warn(`[OAuth] État non trouvé pour ${platform}`);
+          console.warn(`[OAuth] État non trouvé pour ${actualPlatform}`);
           throw new Error("Session d'authentification expirée ou invalide");
         }
         
@@ -61,22 +73,22 @@ const OAuthCallback = () => {
         }
 
         // Nettoyer l'état stocké
-        localStorage.removeItem(`${platform}_oauth_state`);
+        localStorage.removeItem(`${actualPlatform}_oauth_state`);
 
         // Échanger le code contre un token
         const tokenResponse = await exchangeCodeForToken(
-          platform as SocialPlatform, 
+          actualPlatform as SocialPlatform, 
           code
         );
 
-        console.log(`[OAuth] Token obtenu pour ${platform}`);
+        console.log(`[OAuth] Token obtenu pour ${actualPlatform}`);
 
         // Récupérer la couleur correspondant à la plateforme
         let color = "bg-gray-500";
-        let name = platform.charAt(0).toUpperCase() + platform.slice(1);
-        let username = `utilisateur_de_${platform}`;
+        let name = actualPlatform.charAt(0).toUpperCase() + actualPlatform.slice(1);
+        let username = `utilisateur_de_${actualPlatform}`;
 
-        switch (platform) {
+        switch (actualPlatform) {
           case 'facebook': 
             color = "bg-blue-600"; 
             name = "Facebook";
@@ -104,7 +116,7 @@ const OAuthCallback = () => {
           name: name as any,
           username,
           connected: true,
-          icon: platform,
+          icon: actualPlatform,
           color,
         });
 
@@ -158,7 +170,7 @@ const OAuthCallback = () => {
             <>
               <Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" />
               <h2 className="mt-4 text-xl font-semibold">Connexion en cours</h2>
-              <p className="mt-2">Nous finalisons la connexion à votre compte {platform}...</p>
+              <p className="mt-2">Nous finalisons la connexion à votre compte social...</p>
             </>
           )}
           

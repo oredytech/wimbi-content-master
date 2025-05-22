@@ -32,7 +32,7 @@ export const generateAuthUrl = (platform: SocialPlatform): string => {
         response_type: "code",
         scope: config.scopes.join(",")
       });
-      return `https://www.facebook.com/v17.0/dialog/oauth?${params.toString()}`;
+      return `https://www.facebook.com/v18.0/dialog/oauth?${params.toString()}`;
     }
     
     case "twitter": {
@@ -68,10 +68,10 @@ export const generateAuthUrl = (platform: SocialPlatform): string => {
     
     case "instagram": {
       // Instagram utilise le même flux OAuth que Facebook
-      const fbConfig = socialConfig.facebook;
+      const igConfig = config as typeof socialConfig.instagram;
       const params = new URLSearchParams({
-        client_id: fbConfig.appId,
-        redirect_uri: `${window.location.origin}/auth/callback/instagram`,
+        client_id: igConfig.appId,
+        redirect_uri: config.redirectUri,
         state: state,
         response_type: "code",
         scope: "user_profile,user_media"
