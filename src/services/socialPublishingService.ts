@@ -5,6 +5,7 @@ import { publishToFacebook } from "./social/platformPublishers/facebookPublisher
 import { publishToTwitter } from "./social/platformPublishers/twitterPublisher";
 import { publishToLinkedin } from "./social/platformPublishers/linkedinPublisher";
 import { publishToInstagram } from "./social/platformPublishers/instagramPublisher";
+import { SocialPost, PublishResult } from "./social/types";
 
 // Réexporter les types
 export type { SocialPost, PublishResult } from "./social/types";
