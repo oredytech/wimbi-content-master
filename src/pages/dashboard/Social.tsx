@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, HelpCircle, Calendar } from 'lucide-react';
+import { Plus, HelpCircle, Calendar, Users, CheckCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,8 @@ import ScheduledPostsList from './social/ScheduledPostsList';
 import AnalyticsTab from './social/AnalyticsTab';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
+import { getSavedFacebookData, hasFacebookPages } from '@/services/oauth/facebookAuthService';
+import { useLocation } from 'react-router-dom';
 
 const Social = () => {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -23,18 +25,50 @@ const Social = () => {
   const { socialAccounts, scheduledPosts, toggleSocialConnection, removeSocialAccount, removeScheduledPost } = useAppContext();
   const { toast } = useToast();
   const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
+  const [facebookData, setFacebookData] = useState<any>(null);
+  const location = useLocation();
 
   // Vérifier les tokens réellement présents au chargement
   useEffect(() => {
     const platforms: SocialPlatform[] = ["facebook", "twitter", "instagram", "linkedin"];
     const connected = platforms.filter(platform => getAccessToken(platform) !== null);
     setConnectedAccounts(connected);
+    
+    // Récupérer les données Facebook si disponibles
+    const fbData = getSavedFacebookData();
+    if (fbData) {
+      setFacebookData(fbData);
+    }
   }, []);
+
+  // Détecter les connexions réussies depuis l'URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const connectedPlatform = params.get('connected');
+    
+    if (connectedPlatform === 'facebook') {
+      // Recharger les données Facebook fraîchement connectées
+      const fbData = getSavedFacebookData();
+      if (fbData) {
+        setFacebookData(fbData);
+        toast({
+          title: "Facebook connecté avec succès",
+          description: `${fbData.pages?.length || 0} page(s) disponible(s) pour publication`,
+        });
+      }
+    }
+  }, [location.search, toast]);
 
   const handleRemoveAccount = (id: string, name: string, platform: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer le compte ${name} ?`)) {
       // Supprimer le token d'accès
       removeAccessToken(platform.toLowerCase() as SocialPlatform);
+      
+      // Supprimer les données Facebook spécifiques
+      if (platform.toLowerCase() === 'facebook') {
+        localStorage.removeItem('facebook_data');
+        setFacebookData(null);
+      }
       
       // Supprimer le compte de l'état global
       removeSocialAccount(id);
@@ -53,6 +87,12 @@ const Social = () => {
     if (connected) {
       // Déconnexion
       removeAccessToken(platform.toLowerCase() as SocialPlatform);
+      
+      if (platform.toLowerCase() === 'facebook') {
+        localStorage.removeItem('facebook_data');
+        setFacebookData(null);
+      }
+      
       toggleSocialConnection(id);
       setConnectedAccounts(prev => prev.filter(p => p !== platform.toLowerCase()));
       
@@ -97,6 +137,21 @@ const Social = () => {
           </Button>
         </div>
       </div>
+
+      {/* Affichage des informations Facebook si connecté */}
+      {facebookData && facebookData.pages && facebookData.pages.length > 0 && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <CheckCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <strong>Facebook connecté :</strong> {facebookData.user.name} - {facebookData.pages.length} page(s) disponible(s)
+              </div>
+              <Users className="h-4 w-4" />
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {connectedAccounts.length === 0 && (
         <Alert className="bg-amber-50 border-amber-200">

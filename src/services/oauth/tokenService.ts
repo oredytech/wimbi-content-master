@@ -2,6 +2,12 @@
 import { socialConfig, SocialPlatform } from "@/config/socialConfig";
 import { AuthError, AccessToken } from "./types";
 import { getOAuthTemporaryData, removeOAuthTemporaryData, saveAccessToken } from "./storageService";
+import { 
+  exchangeFacebookCodeForToken, 
+  getFacebookUserInfo, 
+  getFacebookPages, 
+  saveFacebookData 
+} from "./facebookAuthService";
 
 /**
  * Échange un code d'autorisation contre un token d'accès
@@ -17,19 +23,34 @@ export const exchangeCodeForToken = async (
   
   try {
     const config = socialConfig[platform];
-    
-    // Dans une implémentation réelle, ces requêtes devraient être faites côté serveur pour sécurité
     let tokenResponse;
     
     switch (platform) {
       case "facebook": {
-        // Pour Facebook, nous simulons l'échange de code (côté serveur normalement)
-        // En réalité, il faut faire une requête POST vers l'API Facebook
+        // Traitement spécial pour Facebook avec récupération des pages
+        console.log(`[Facebook] Début du processus d'authentification complet`);
+        
+        // 1. Échanger le code contre un token utilisateur
+        const facebookToken = await exchangeFacebookCodeForToken(code);
+        
+        // 2. Récupérer les informations de l'utilisateur
+        const userInfo = await getFacebookUserInfo(facebookToken.access_token);
+        
+        // 3. Récupérer les pages de l'utilisateur
+        const userPages = await getFacebookPages(facebookToken.access_token);
+        
+        // 4. Sauvegarder toutes les données
+        saveFacebookData(userInfo, facebookToken.access_token, userPages);
+        
         tokenResponse = {
-          access_token: `fb_mock_token_${Date.now()}`,
-          token_type: "Bearer",
-          expires_in: 3600
+          access_token: facebookToken.access_token,
+          token_type: facebookToken.token_type,
+          expires_in: facebookToken.expires_in || 3600,
+          user_info: userInfo,
+          pages: userPages
         };
+        
+        console.log(`[Facebook] Processus complet terminé - ${userPages.length} pages connectées`);
         break;
       }
       
@@ -37,7 +58,6 @@ export const exchangeCodeForToken = async (
         // Récupérer le code verifier pour PKCE
         const codeVerifier = getOAuthTemporaryData('twitter_code_verifier') || "";
         
-        // Pour Twitter, nous simulons l'échange de code (côté serveur normalement)
         tokenResponse = {
           access_token: `twitter_mock_token_${Date.now()}`,
           token_type: "Bearer",
@@ -48,7 +68,6 @@ export const exchangeCodeForToken = async (
       }
       
       case "linkedin": {
-        // Pour LinkedIn, nous simulons l'échange de code (côté serveur normalement)
         tokenResponse = {
           access_token: `linkedin_mock_token_${Date.now()}`,
           token_type: "Bearer",
@@ -59,7 +78,6 @@ export const exchangeCodeForToken = async (
       }
       
       case "instagram": {
-        // Pour Instagram, nous simulons l'échange de code (côté serveur normalement)
         tokenResponse = {
           access_token: `instagram_mock_token_${Date.now()}`,
           token_type: "Bearer",

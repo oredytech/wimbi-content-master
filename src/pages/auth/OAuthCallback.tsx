@@ -6,9 +6,10 @@ import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, XCircle, Settings, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Settings, RefreshCw, Users } from 'lucide-react';
 import { SocialPlatform } from '@/config/socialConfig';
 import { Link } from 'react-router-dom';
+import { getSavedFacebookData } from '@/services/oauth/facebookAuthService';
 
 const OAuthCallback = () => {
   const { platform } = useParams<{ platform: string }>();
@@ -19,6 +20,7 @@ const OAuthCallback = () => {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState("");
   const [detailedError, setDetailedError] = useState("");
+  const [connectionDetails, setConnectionDetails] = useState<any>(null);
 
   useEffect(() => {
     const processOAuthCallback = async () => {
@@ -30,15 +32,12 @@ const OAuthCallback = () => {
         const error = params.get('error');
         const errorDescription = params.get('error_description') || params.get('error_reason');
         
-        // Détermination de la plateforme correcte (extraire de la route)
+        // Détermination de la plateforme correcte
         let actualPlatform = platform;
         
-        // Gestion des différents formats de routes
         if (actualPlatform === 'callback') {
-          // Format /auth/callback/:platform
           actualPlatform = location.pathname.split('/').pop();
         } else if (location.pathname.includes(`/auth/${actualPlatform}/callback`)) {
-          // Format /auth/:platform/callback
           // actualPlatform est déjà correct
         }
         
@@ -92,22 +91,28 @@ const OAuthCallback = () => {
           case 'facebook': 
             color = "bg-blue-600"; 
             name = "Facebook";
-            // Normalement, récupérer les infos de l'utilisateur via l'API
+            // Pour Facebook, récupérer les informations détaillées
+            const facebookData = getSavedFacebookData();
+            if (facebookData && facebookData.user) {
+              username = facebookData.user.name;
+              setConnectionDetails({
+                userInfo: facebookData.user,
+                pages: facebookData.pages || [],
+                pagesCount: facebookData.pages?.length || 0
+              });
+            }
             break;
           case 'twitter': 
             color = "bg-sky-500";
             name = "Twitter";
-            // Normalement, récupérer les infos de l'utilisateur via l'API
             break;
           case 'instagram': 
             color = "bg-pink-600";
             name = "Instagram";
-            // Normalement, récupérer les infos de l'utilisateur via l'API
             break;
           case 'linkedin': 
             color = "bg-blue-700";
             name = "LinkedIn";
-            // Normalement, récupérer les infos de l'utilisateur via l'API
             break;
         }
 
@@ -121,15 +126,24 @@ const OAuthCallback = () => {
         });
 
         setStatus('success');
-        toast({
-          title: "Connexion réussie",
-          description: `Votre compte ${name} a été connecté avec succès.`,
-        });
+        
+        // Toast de succès personnalisé selon la plateforme
+        if (actualPlatform === 'facebook' && connectionDetails?.pagesCount > 0) {
+          toast({
+            title: "Connexion Facebook réussie",
+            description: `Votre compte ${name} et ${connectionDetails.pagesCount} page(s) ont été connectés avec succès.`,
+          });
+        } else {
+          toast({
+            title: "Connexion réussie",
+            description: `Votre compte ${name} a été connecté avec succès.`,
+          });
+        }
 
         // Rediriger vers la page des réseaux sociaux après un court délai
         setTimeout(() => {
-          navigate("/dashboard/social");
-        }, 2000);
+          navigate("/dashboard/social?connected=" + actualPlatform);
+        }, 2500);
 
       } catch (error) {
         setStatus('error');
@@ -179,6 +193,17 @@ const OAuthCallback = () => {
               <CheckCircle className="h-8 w-8 mx-auto text-green-600" />
               <h2 className="mt-4 text-xl font-semibold">Connexion réussie!</h2>
               <p className="mt-2">Vous allez être redirigé vers votre tableau de bord...</p>
+              
+              {connectionDetails && connectionDetails.pagesCount > 0 && (
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-center gap-2 text-green-700">
+                    <Users className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      {connectionDetails.pagesCount} page(s) Facebook connectée(s)
+                    </span>
+                  </div>
+                </div>
+              )}
             </>
           )}
           
@@ -199,9 +224,9 @@ const OAuthCallback = () => {
               Réessayer
             </Button>
             <Button asChild>
-              <Link to="/dashboard/api-keys-config" className="flex items-center gap-1">
+              <Link to="/dashboard/social" className="flex items-center gap-1">
                 <Settings className="h-4 w-4" />
-                Vérifier la configuration
+                Retour au tableau de bord
               </Link>
             </Button>
           </CardFooter>
