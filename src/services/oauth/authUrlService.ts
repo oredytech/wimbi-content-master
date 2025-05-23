@@ -28,9 +28,9 @@ export const generateAuthUrl = (platform: SocialPlatform): string => {
       const params = new URLSearchParams({
         client_id: fbConfig.appId,
         redirect_uri: config.redirectUri,
-        state: state,
+        scope: "email,public_profile,pages_manage_posts,pages_read_engagement,pages_show_list",
         response_type: "code",
-        scope: config.scopes.join(",")
+        state: state
       });
       return `https://www.facebook.com/v18.0/dialog/oauth?${params.toString()}`;
     }

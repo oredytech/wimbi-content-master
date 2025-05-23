@@ -2,13 +2,16 @@
 // Configuration des APIs réseaux sociaux
 
 // URL de base pour les redirections
-const BASE_URL = import.meta.env.VITE_BASE_URL || "https://wimbimaster.netlify.app";
+const BASE_URL = import.meta.env.VITE_BASE_URL || 
+  (window.location.hostname === 'localhost' ? 'http://localhost:5173' :
+   window.location.hostname.includes('netlify.app') ? 'https://wimbimaster.netlify.app' :
+   'https://wimbimaster.com');
 
 export const socialConfig = {
   facebook: {
     appId: "1454263535543676",
     redirectUri: `${BASE_URL}/auth/facebook/callback`,
-    scopes: ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "pages_manage_metadata", "public_profile", "email"],
+    scopes: ["email", "public_profile", "pages_manage_posts", "pages_read_engagement", "pages_show_list"],
   },
   twitter: {
     clientId: "GgVlmwz1yiICgc1dtuyy0PDXK",
@@ -24,7 +27,7 @@ export const socialConfig = {
     // Utilise les mêmes clés que Facebook mais avec des scopes différents
     appId: "1454263535543676",
     redirectUri: `${BASE_URL}/auth/instagram/callback`,
-    scopes: ["instagram_basic", "instagram_content_publish", "pages_show_list", "pages_read_engagement"],
+    scopes: ["user_profile", "user_media"],
   },
   wordpress: {
     // Configuration générique simplifiée
