@@ -1,22 +1,19 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { exchangeCodeForToken } from '@/services/oauthService';
-import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle, Settings, RefreshCw, Users } from 'lucide-react';
 import { SocialPlatform } from '@/config/socialConfig';
 import { Link } from 'react-router-dom';
-import { getSavedFacebookData } from '@/services/oauth/facebookAuthService';
+import { getSocialAccount } from '@/services/firebase/socialAccountsService';
 
 const OAuthCallback = () => {
   const { platform } = useParams<{ platform: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addSocialAccount } = useAppContext();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState("");
   const [detailedError, setDetailedError] = useState("");
@@ -74,56 +71,26 @@ const OAuthCallback = () => {
         // Nettoyer l'état stocké
         localStorage.removeItem(`${actualPlatform}_oauth_state`);
 
-        // Échanger le code contre un token
+        // Échanger le code contre un token et sauvegarder dans Firebase
         const tokenResponse = await exchangeCodeForToken(
           actualPlatform as SocialPlatform, 
           code
         );
 
-        console.log(`[OAuth] Token obtenu pour ${actualPlatform}`);
+        console.log(`[OAuth] Token obtenu et sauvegardé dans Firebase pour ${actualPlatform}`);
 
-        // Récupérer la couleur correspondant à la plateforme
-        let color = "bg-gray-500";
-        let name = actualPlatform.charAt(0).toUpperCase() + actualPlatform.slice(1);
-        let username = `utilisateur_de_${actualPlatform}`;
-
-        switch (actualPlatform) {
-          case 'facebook': 
-            color = "bg-blue-600"; 
-            name = "Facebook";
-            // Pour Facebook, récupérer les informations détaillées
-            const facebookData = getSavedFacebookData();
-            if (facebookData && facebookData.user) {
-              username = facebookData.user.name;
-              setConnectionDetails({
-                userInfo: facebookData.user,
-                pages: facebookData.pages || [],
-                pagesCount: facebookData.pages?.length || 0
-              });
-            }
-            break;
-          case 'twitter': 
-            color = "bg-sky-500";
-            name = "Twitter";
-            break;
-          case 'instagram': 
-            color = "bg-pink-600";
-            name = "Instagram";
-            break;
-          case 'linkedin': 
-            color = "bg-blue-700";
-            name = "LinkedIn";
-            break;
+        // Récupérer les données du compte depuis Firebase
+        const socialAccount = await getSocialAccount(actualPlatform as SocialPlatform);
+        
+        if (socialAccount) {
+          if (actualPlatform === 'facebook' && socialAccount.pages) {
+            setConnectionDetails({
+              userInfo: socialAccount.userInfo,
+              pages: socialAccount.pages,
+              pagesCount: socialAccount.pages.length
+            });
+          }
         }
-
-        // Ajouter le compte aux comptes sociaux connectés
-        addSocialAccount({
-          name: name as any,
-          username,
-          connected: true,
-          icon: actualPlatform,
-          color,
-        });
 
         setStatus('success');
         
@@ -131,12 +98,12 @@ const OAuthCallback = () => {
         if (actualPlatform === 'facebook' && connectionDetails?.pagesCount > 0) {
           toast({
             title: "Connexion Facebook réussie",
-            description: `Votre compte ${name} et ${connectionDetails.pagesCount} page(s) ont été connectés avec succès.`,
+            description: `Votre compte Facebook et ${connectionDetails.pagesCount} page(s) ont été connectés avec succès.`,
           });
         } else {
           toast({
             title: "Connexion réussie",
-            description: `Votre compte ${name} a été connecté avec succès.`,
+            description: `Votre compte ${actualPlatform} a été connecté avec succès.`,
           });
         }
 
@@ -170,7 +137,7 @@ const OAuthCallback = () => {
     };
 
     processOAuthCallback();
-  }, [location, platform, navigate, addSocialAccount, toast]);
+  }, [location, platform, navigate, toast]);
 
   const handleRetry = () => {
     navigate('/dashboard/social');
@@ -184,7 +151,7 @@ const OAuthCallback = () => {
             <>
               <Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" />
               <h2 className="mt-4 text-xl font-semibold">Connexion en cours</h2>
-              <p className="mt-2">Nous finalisons la connexion à votre compte social...</p>
+              <p className="mt-2">Nous finalisons la connexion et sauvegardons vos données...</p>
             </>
           )}
           
@@ -192,7 +159,7 @@ const OAuthCallback = () => {
             <>
               <CheckCircle className="h-8 w-8 mx-auto text-green-600" />
               <h2 className="mt-4 text-xl font-semibold">Connexion réussie!</h2>
-              <p className="mt-2">Vous allez être redirigé vers votre tableau de bord...</p>
+              <p className="mt-2">Vos données ont été sauvegardées de manière sécurisée.</p>
               
               {connectionDetails && connectionDetails.pagesCount > 0 && (
                 <div className="mt-4 p-3 bg-green-50 rounded-lg">

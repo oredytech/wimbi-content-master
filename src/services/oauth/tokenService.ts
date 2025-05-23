@@ -1,13 +1,13 @@
-
 import { socialConfig, SocialPlatform } from "@/config/socialConfig";
 import { AuthError, AccessToken } from "./types";
-import { getOAuthTemporaryData, removeOAuthTemporaryData, saveAccessToken } from "./storageService";
+import { getOAuthTemporaryData, removeOAuthTemporaryData } from "./storageService";
 import { 
   exchangeFacebookCodeForToken, 
   getFacebookUserInfo, 
   getFacebookPages, 
-  saveFacebookData 
+  saveFacebookDataToFirebase 
 } from "./facebookAuthService";
+import { saveSocialAccountToFirebase } from "@/services/firebase/socialAccountsService";
 
 /**
  * Échange un code d'autorisation contre un token d'accès
@@ -27,7 +27,6 @@ export const exchangeCodeForToken = async (
     
     switch (platform) {
       case "facebook": {
-        // Traitement spécial pour Facebook avec récupération des pages
         console.log(`[Facebook] Début du processus d'authentification complet`);
         
         // 1. Échanger le code contre un token utilisateur
@@ -39,8 +38,8 @@ export const exchangeCodeForToken = async (
         // 3. Récupérer les pages de l'utilisateur
         const userPages = await getFacebookPages(facebookToken.access_token);
         
-        // 4. Sauvegarder toutes les données
-        saveFacebookData(userInfo, facebookToken.access_token, userPages);
+        // 4. Sauvegarder toutes les données dans Firebase
+        await saveFacebookDataToFirebase(userInfo, facebookToken.access_token, userPages);
         
         tokenResponse = {
           access_token: facebookToken.access_token,
@@ -55,7 +54,6 @@ export const exchangeCodeForToken = async (
       }
       
       case "twitter": {
-        // Récupérer le code verifier pour PKCE
         const codeVerifier = getOAuthTemporaryData('twitter_code_verifier') || "";
         
         tokenResponse = {
@@ -64,6 +62,17 @@ export const exchangeCodeForToken = async (
           expires_in: 7200,
           refresh_token: `twitter_refresh_token_${Date.now()}`
         };
+        
+        // Sauvegarder dans Firebase
+        await saveSocialAccountToFirebase({
+          platform: "twitter",
+          name: "Twitter",
+          username: "@utilisateur_twitter",
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token,
+          expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
+          connectedAt: new Date().toISOString()
+        });
         break;
       }
       
@@ -74,6 +83,17 @@ export const exchangeCodeForToken = async (
           expires_in: 7200,
           refresh_token: `linkedin_refresh_token_${Date.now()}`
         };
+        
+        // Sauvegarder dans Firebase
+        await saveSocialAccountToFirebase({
+          platform: "linkedin",
+          name: "LinkedIn",
+          username: "Utilisateur LinkedIn",
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token,
+          expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
+          connectedAt: new Date().toISOString()
+        });
         break;
       }
       
@@ -83,6 +103,16 @@ export const exchangeCodeForToken = async (
           token_type: "Bearer",
           expires_in: 3600
         };
+        
+        // Sauvegarder dans Firebase
+        await saveSocialAccountToFirebase({
+          platform: "instagram",
+          name: "Instagram",
+          username: "@utilisateur_instagram",
+          accessToken: tokenResponse.access_token,
+          expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
+          connectedAt: new Date().toISOString()
+        });
         break;
       }
       
@@ -90,20 +120,7 @@ export const exchangeCodeForToken = async (
         throw new AuthError(`Plateforme non supportée: ${platform}`, platform);
     }
     
-    console.log(`[OAuth] Token obtenu pour ${platform}:`, tokenResponse);
-    
-    // Calculer la date d'expiration
-    const expiresAt = Date.now() + (tokenResponse.expires_in * 1000);
-    
-    // Enregistrer le token
-    const accessToken: AccessToken = {
-      value: tokenResponse.access_token,
-      expiresAt,
-      tokenType: tokenResponse.token_type,
-      refreshToken: tokenResponse.refresh_token
-    };
-    
-    saveAccessToken(platform, accessToken);
+    console.log(`[OAuth] Token obtenu et sauvegardé dans Firebase pour ${platform}`);
     
     return tokenResponse;
   } catch (error) {

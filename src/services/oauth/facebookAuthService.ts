@@ -1,6 +1,6 @@
-
 import { socialConfig } from "@/config/socialConfig";
 import { AuthError } from "./types";
+import { saveSocialAccountToFirebase } from "@/services/firebase/socialAccountsService";
 
 /**
  * Interface pour les données de page Facebook
@@ -38,32 +38,7 @@ export interface FacebookUser {
 export const exchangeFacebookCodeForToken = async (code: string): Promise<FacebookTokenResponse> => {
   console.log(`[Facebook] Échange du code d'autorisation: ${code.substring(0, 10)}...`);
   
-  // IMPORTANT: En production, cette requête DOIT être faite côté serveur
-  // car elle nécessite l'app_secret qui ne doit JAMAIS être exposé côté client
-  
   try {
-    // Simulation de l'appel API réel (en production, faire ceci côté serveur)
-    /*
-    const response = await fetch('https://graph.facebook.com/v18.0/oauth/access_token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: socialConfig.facebook.appId,
-        client_secret: process.env.FACEBOOK_APP_SECRET, // CÔTÉ SERVEUR UNIQUEMENT
-        redirect_uri: socialConfig.facebook.redirectUri,
-        code: code,
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Erreur Facebook API: ${response.status}`);
-    }
-    
-    const tokenData = await response.json();
-    */
-    
     // Simulation pour la démo (à remplacer par l'appel API réel côté serveur)
     const tokenData: FacebookTokenResponse = {
       access_token: `facebook_user_token_${Date.now()}_${code.substring(0, 8)}`,
@@ -161,20 +136,40 @@ export const getFacebookPages = async (userAccessToken: string): Promise<Faceboo
 };
 
 /**
- * Sauvegarde les données Facebook dans le localStorage
- * En production, ceci devrait être sauvegardé dans une base de données sécurisée
+ * Sauvegarde les données Facebook dans Firebase
+ */
+export const saveFacebookDataToFirebase = async (
+  userData: FacebookUser, 
+  userToken: string, 
+  pages: FacebookPage[]
+): Promise<void> => {
+  try {
+    const expiresAt = Date.now() + (3600 * 1000); // 1 heure
+    
+    await saveSocialAccountToFirebase({
+      platform: "facebook",
+      name: "Facebook",
+      username: userData.name,
+      accessToken: userToken,
+      expiresAt,
+      connectedAt: new Date().toISOString(),
+      pages,
+      userInfo: userData
+    });
+    
+    console.log(`[Facebook] Données sauvegardées dans Firebase pour l'utilisateur ${userData.name}`);
+  } catch (error) {
+    console.error(`[Facebook] Erreur lors de la sauvegarde dans Firebase:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fonction de compatibilité pour le localStorage (deprecated)
  */
 export const saveFacebookData = (userData: FacebookUser, userToken: string, pages: FacebookPage[]): void => {
-  const facebookData = {
-    user: userData,
-    userToken,
-    pages,
-    connectedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 3600 * 1000).toISOString() // 1 heure
-  };
-  
-  localStorage.setItem('facebook_data', JSON.stringify(facebookData));
-  console.log(`[Facebook] Données sauvegardées pour l'utilisateur ${userData.name}`);
+  console.warn('[Facebook] saveFacebookData est deprecated, utilisez saveFacebookDataToFirebase');
+  saveFacebookDataToFirebase(userData, userToken, pages);
 };
 
 /**
