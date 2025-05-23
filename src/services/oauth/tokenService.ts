@@ -1,3 +1,4 @@
+
 import { socialConfig, SocialPlatform } from "@/config/socialConfig";
 import { AuthError, AccessToken } from "./types";
 import { getOAuthTemporaryData, removeOAuthTemporaryData } from "./storageService";
@@ -168,9 +169,6 @@ export const refreshAccessToken = async (
       tokenType: tokenResponse.token_type,
       refreshToken: tokenResponse.refresh_token
     };
-    
-    // Sauvegarder le nouveau token
-    saveAccessToken(platform, accessToken);
     
     return accessToken;
   } catch (error) {

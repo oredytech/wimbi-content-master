@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { exchangeCodeForToken } from '@/services/oauthService';
@@ -107,10 +108,10 @@ const OAuthCallback = () => {
           });
         }
 
-        // Rediriger vers la page des réseaux sociaux après un court délai
+        // Rediriger automatiquement vers le dashboard après une connexion réussie
         setTimeout(() => {
-          navigate("/dashboard/social?connected=" + actualPlatform);
-        }, 2500);
+          navigate("/dashboard", { replace: true });
+        }, 1500);
 
       } catch (error) {
         setStatus('error');
@@ -137,10 +138,14 @@ const OAuthCallback = () => {
     };
 
     processOAuthCallback();
-  }, [location, platform, navigate, toast]);
+  }, [location, platform, navigate, toast, connectionDetails?.pagesCount]);
 
   const handleRetry = () => {
     navigate('/dashboard/social');
+  };
+
+  const handleGoToDashboard = () => {
+    navigate('/dashboard');
   };
 
   return (
@@ -160,6 +165,7 @@ const OAuthCallback = () => {
               <CheckCircle className="h-8 w-8 mx-auto text-green-600" />
               <h2 className="mt-4 text-xl font-semibold">Connexion réussie!</h2>
               <p className="mt-2">Vos données ont été sauvegardées de manière sécurisée.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Redirection automatique vers le tableau de bord...</p>
               
               {connectionDetails && connectionDetails.pagesCount > 0 && (
                 <div className="mt-4 p-3 bg-green-50 rounded-lg">
@@ -171,6 +177,12 @@ const OAuthCallback = () => {
                   </div>
                 </div>
               )}
+              
+              <div className="mt-4">
+                <Button onClick={handleGoToDashboard} className="w-full">
+                  Aller au tableau de bord
+                </Button>
+              </div>
             </>
           )}
           
@@ -191,7 +203,7 @@ const OAuthCallback = () => {
               Réessayer
             </Button>
             <Button asChild>
-              <Link to="/dashboard/social" className="flex items-center gap-1">
+              <Link to="/dashboard" className="flex items-center gap-1">
                 <Settings className="h-4 w-4" />
                 Retour au tableau de bord
               </Link>
