@@ -23,6 +23,12 @@ const OAuthCallback = () => {
   useEffect(() => {
     const processOAuthCallback = async () => {
       try {
+        // Nettoyer l'URL en supprimant les fragments Facebook (#_=_)
+        const cleanUrl = window.location.href.replace(/#_=_$/, '');
+        if (cleanUrl !== window.location.href) {
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+
         // Extraire les paramètres de l'URL
         const params = new URLSearchParams(location.search);
         const code = params.get('code');
@@ -33,10 +39,18 @@ const OAuthCallback = () => {
         // Détermination de la plateforme correcte
         let actualPlatform = platform;
         
-        if (actualPlatform === 'callback') {
-          actualPlatform = location.pathname.split('/').pop();
-        } else if (location.pathname.includes(`/auth/${actualPlatform}/callback`)) {
-          // actualPlatform est déjà correct
+        // Détecter la plateforme depuis l'URL si pas dans les paramètres
+        if (!actualPlatform || actualPlatform === 'callback') {
+          const pathParts = location.pathname.split('/');
+          const facebookIndex = pathParts.indexOf('facebook');
+          const twitterIndex = pathParts.indexOf('twitter');
+          const linkedinIndex = pathParts.indexOf('linkedin');
+          const instagramIndex = pathParts.indexOf('instagram');
+          
+          if (facebookIndex !== -1) actualPlatform = 'facebook';
+          else if (twitterIndex !== -1) actualPlatform = 'twitter';
+          else if (linkedinIndex !== -1) actualPlatform = 'linkedin';
+          else if (instagramIndex !== -1) actualPlatform = 'instagram';
         }
         
         console.log(`[OAuth] Traitement du callback pour ${actualPlatform} avec code: ${code ? 'présent' : 'absent'}, état: ${state ? 'présent' : 'absent'}, erreur: ${error || 'aucune'}`);

@@ -45,11 +45,16 @@ function App() {
             <Route path="signup" element={<Signup />} />
           </Route>
 
-          {/* Routes pour les callbacks OAuth avec les nouveaux chemins */}
+          {/* Routes pour les callbacks OAuth - support des deux formats */}
           <Route path="/auth/callback/:platform" element={<OAuthCallback />} />
           <Route path="/auth/:platform/callback" element={<OAuthCallback />} />
+          {/* Routes spécifiques pour chaque plateforme */}
+          <Route path="/auth/facebook/callback" element={<OAuthCallback />} />
+          <Route path="/auth/twitter/callback" element={<OAuthCallback />} />
+          <Route path="/auth/linkedin/callback" element={<OAuthCallback />} />
+          <Route path="/auth/instagram/callback" element={<OAuthCallback />} />
           
-          {/* Dashboard protégé - la route est maintenant * pour matcher tous les sous-chemins */}
+          {/* Dashboard protégé */}
           <Route path="/dashboard/*" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
             <Route index element={<Dashboard />} />
             <Route path="wordpress" element={<WordPress />} />
@@ -57,9 +62,6 @@ function App() {
             <Route path="contents" element={<Contents />} />
             <Route path="new-content" element={<NewContent />} />
             <Route path="settings" element={<Settings />} />
-            {/* Ces deux routes ont été supprimées */}
-            {/* <Route path="api-keys-help" element={<ApiKeysHelp />} /> */}
-            {/* <Route path="api-keys-config" element={<ApiKeysConfig />} /> */}
           </Route>
 
           {/* Route 404 - doit être en dernier */}
