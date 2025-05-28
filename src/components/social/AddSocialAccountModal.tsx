@@ -28,7 +28,7 @@ const AddSocialAccountModal: React.FC<AddSocialAccountModalProps> = ({ isOpen, o
     setIsLoading(platformId);
     
     try {
-      const result = initiateOAuthFlow(platformId as SocialPlatform);
+      const result = await initiateOAuthFlow(platformId as SocialPlatform);
       
       if (!result.success) {
         toast({
