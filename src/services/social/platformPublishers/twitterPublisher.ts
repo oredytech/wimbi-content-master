@@ -1,6 +1,7 @@
 
 import { AccessToken } from "@/services/oauth/types";
 import { SocialPost, PublishResult } from "../types";
+import { publishTweet } from "@/services/oauth/twitter/twitterAuthService";
 
 /**
  * Publie sur Twitter
@@ -21,17 +22,14 @@ export const publishToTwitter = async (accessToken: AccessToken, post: SocialPos
       };
     }
     
-    // Dans une implémentation réelle, nous ferions une requête à l'API Twitter
-    // POST /2/tweets avec le token d'accès
-    
-    // Pour la démo, on simule une publication réussie
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    // Publier le tweet via l'API Twitter
+    const tweetResult = await publishTweet(accessToken.value, post.content);
     
     return {
       success: true,
       platform: "twitter",
-      postId: `twitter_${Date.now()}`,
-      postUrl: `https://twitter.com/user/status/${Date.now()}`
+      postId: tweetResult.id,
+      postUrl: `https://twitter.com/user/status/${tweetResult.id}`
     };
   } catch (error) {
     console.error("[Social] Erreur lors de la publication sur Twitter:", error);

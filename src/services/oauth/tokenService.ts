@@ -1,5 +1,6 @@
 
 import { socialConfig, SocialPlatform } from "@/config/socialConfig";
+import { twitterConfig } from "@/config/twitterConfig";
 import { AuthError, AccessToken } from "./types";
 import { getOAuthTemporaryData, removeOAuthTemporaryData } from "./storageService";
 import { 
@@ -8,6 +9,11 @@ import {
   getFacebookPages, 
   saveFacebookDataToFirebase 
 } from "./facebookAuthService";
+import { 
+  exchangeTwitterCodeForToken,
+  getTwitterUserInfo,
+  saveTwitterDataToFirebase
+} from "./twitter/twitterAuthService";
 import { saveSocialAccountToFirebase } from "@/services/firebase/socialAccountsService";
 
 /**
@@ -23,7 +29,6 @@ export const exchangeCodeForToken = async (
   console.log(`[OAuth] Échange de code pour ${platform}...`);
   
   try {
-    const config = socialConfig[platform];
     let tokenResponse;
     
     switch (platform) {
@@ -55,25 +60,36 @@ export const exchangeCodeForToken = async (
       }
       
       case "twitter": {
+        console.log(`[Twitter] Début du processus d'authentification complet`);
+        
         const codeVerifier = getOAuthTemporaryData('twitter_code_verifier') || "";
+        if (!codeVerifier) {
+          throw new AuthError("Code verifier manquant pour Twitter", "twitter");
+        }
+        
+        // 1. Échanger le code contre un token utilisateur
+        const twitterToken = await exchangeTwitterCodeForToken(code, codeVerifier);
+        
+        // 2. Récupérer les informations de l'utilisateur
+        const userInfo = await getTwitterUserInfo(twitterToken.access_token);
+        
+        // 3. Sauvegarder dans Firebase
+        await saveTwitterDataToFirebase(
+          userInfo, 
+          twitterToken.access_token, 
+          twitterToken.refresh_token,
+          twitterToken.expires_in
+        );
         
         tokenResponse = {
-          access_token: `twitter_mock_token_${Date.now()}`,
-          token_type: "Bearer",
-          expires_in: 7200,
-          refresh_token: `twitter_refresh_token_${Date.now()}`
+          access_token: twitterToken.access_token,
+          token_type: twitterToken.token_type,
+          expires_in: twitterToken.expires_in,
+          refresh_token: twitterToken.refresh_token,
+          user_info: userInfo
         };
         
-        // Sauvegarder dans Firebase
-        await saveSocialAccountToFirebase({
-          platform: "twitter",
-          name: "Twitter",
-          username: "@utilisateur_twitter",
-          accessToken: tokenResponse.access_token,
-          refreshToken: tokenResponse.refresh_token,
-          expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
-          connectedAt: new Date().toISOString()
-        });
+        console.log(`[Twitter] Processus complet terminé pour @${userInfo.username}`);
         break;
       }
       

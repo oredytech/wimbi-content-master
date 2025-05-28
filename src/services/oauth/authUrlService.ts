@@ -1,20 +1,20 @@
 
 import { socialConfig, SocialPlatform } from "@/config/socialConfig";
+import { twitterConfig } from "@/config/twitterConfig";
 import { AuthError } from "./types";
 import { generateOAuthState, saveOAuthTemporaryData } from "./storageService";
+import { generateCodeVerifier, generateCodeChallenge } from "./twitter/twitterPKCE";
 
 /**
  * Génère une URL d'autorisation OAuth pour une plateforme donnée
  * @param {SocialPlatform} platform Plateforme sociale
  * @returns {string} URL d'autorisation
  */
-export const generateAuthUrl = (platform: SocialPlatform): string => {
+export const generateAuthUrl = async (platform: SocialPlatform): Promise<string> => {
   // Vérifier que la plateforme est supportée
-  if (!socialConfig[platform]) {
+  if (!socialConfig[platform] && platform !== "twitter") {
     throw new AuthError(`Plateforme non supportée: ${platform}`, platform);
   }
-  
-  const config = socialConfig[platform];
   
   // Générer un état aléatoire pour sécuriser le flux OAuth
   const state = generateOAuthState();
@@ -24,6 +24,7 @@ export const generateAuthUrl = (platform: SocialPlatform): string => {
   // Construire l'URL selon la plateforme
   switch (platform) {
     case "facebook": {
+      const config = socialConfig[platform];
       const fbConfig = config as typeof socialConfig.facebook;
       const params = new URLSearchParams({
         client_id: fbConfig.appId,
@@ -37,24 +38,26 @@ export const generateAuthUrl = (platform: SocialPlatform): string => {
     
     case "twitter": {
       // Utiliser OAuth 2.0 avec PKCE pour Twitter
-      // Générer le code challenge (normalement avec SHA-256, mais simplifié ici)
-      const twitterConfig = config as typeof socialConfig.twitter;
-      const codeVerifier = generateOAuthState() + generateOAuthState();
-      saveOAuthTemporaryData(`twitter_code_verifier`, codeVerifier);
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      
+      // Sauvegarder le code verifier pour l'échange de token
+      saveOAuthTemporaryData('twitter_code_verifier', codeVerifier);
       
       const params = new URLSearchParams({
         client_id: twitterConfig.clientId,
-        redirect_uri: config.redirectUri,
+        redirect_uri: twitterConfig.redirectUri,
         state: state,
         response_type: "code",
-        code_challenge: codeVerifier, // Normalement hasher avec SHA-256
-        code_challenge_method: "plain", // Ou "S256" si hashé
-        scope: config.scopes.join(" ")
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
+        scope: twitterConfig.scopes.join(" ")
       });
       return `https://twitter.com/i/oauth2/authorize?${params.toString()}`;
     }
     
     case "linkedin": {
+      const config = socialConfig[platform];
       const linkedinConfig = config as typeof socialConfig.linkedin;
       const params = new URLSearchParams({
         client_id: linkedinConfig.clientId,
@@ -67,7 +70,7 @@ export const generateAuthUrl = (platform: SocialPlatform): string => {
     }
     
     case "instagram": {
-      // Instagram utilise le même flux OAuth que Facebook
+      const config = socialConfig[platform];
       const igConfig = config as typeof socialConfig.instagram;
       const params = new URLSearchParams({
         client_id: igConfig.appId,

@@ -16,9 +16,9 @@ export { connectWordPressSite } from "./oauth/wordpressService";
  * @param {SocialPlatform} platform Plateforme sociale
  * @returns {Object} Résultat de l'opération
  */
-export const initiateOAuthFlow = (platform: SocialPlatform): OAuthResult => {
+export const initiateOAuthFlow = async (platform: SocialPlatform): Promise<OAuthResult> => {
   try {
-    const authUrl = generateAuthUrl(platform);
+    const authUrl = await generateAuthUrl(platform);
     
     // Ouvrir une nouvelle fenêtre pour l'authentification
     const authWindow = window.open(
