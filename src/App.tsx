@@ -54,14 +54,24 @@ function App() {
           <Route path="/auth/linkedin/callback" element={<OAuthCallback />} />
           <Route path="/auth/instagram/callback" element={<OAuthCallback />} />
           
-          {/* Dashboard protégé */}
-          <Route path="/dashboard/*" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+          {/* Toutes les routes du dashboard avec protection individuelle */}
+          <Route path="/dashboard" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
             <Route index element={<Dashboard />} />
-            <Route path="wordpress" element={<WordPress />} />
-            <Route path="social" element={<Social />} />
-            <Route path="contents" element={<Contents />} />
-            <Route path="new-content" element={<NewContent />} />
-            <Route path="settings" element={<Settings />} />
+          </Route>
+          <Route path="/dashboard/wordpress" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+            <Route index element={<WordPress />} />
+          </Route>
+          <Route path="/dashboard/social" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+            <Route index element={<Social />} />
+          </Route>
+          <Route path="/dashboard/contents" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+            <Route index element={<Contents />} />
+          </Route>
+          <Route path="/dashboard/new-content" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+            <Route index element={<NewContent />} />
+          </Route>
+          <Route path="/dashboard/settings" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+            <Route index element={<Settings />} />
           </Route>
 
           {/* Route 404 - doit être en dernier */}
