@@ -39,10 +39,19 @@ export const useOAuthCallback = (platform?: string) => {
                 variant: "destructive",
               });
               
-              // Rediriger vers la page de connexion après 2 secondes
-              setTimeout(() => {
-                navigate('/login');
-              }, 2000);
+              // Fermer le popup et informer la fenêtre parent de l'erreur
+              if (window.opener) {
+                window.opener.postMessage({ 
+                  type: 'oauth_error', 
+                  error: 'Utilisateur non connecté' 
+                }, '*');
+                window.close();
+              } else {
+                // Rediriger vers la page de connexion après 2 secondes
+                setTimeout(() => {
+                  navigate('/login');
+                }, 2000);
+              }
             }
           });
           
@@ -53,7 +62,16 @@ export const useOAuthCallback = (platform?: string) => {
               setStatus('error');
               setErrorMessage("Session expirée");
               setDetailedError("Votre session a expiré. Veuillez vous reconnecter.");
-              navigate('/login');
+              
+              if (window.opener) {
+                window.opener.postMessage({ 
+                  type: 'oauth_error', 
+                  error: 'Session expirée' 
+                }, '*');
+                window.close();
+              } else {
+                navigate('/login');
+              }
             }
           }, 5000);
           
@@ -66,6 +84,15 @@ export const useOAuthCallback = (platform?: string) => {
         setStatus('error');
         setErrorMessage("Erreur inattendue");
         setDetailedError("Une erreur inattendue s'est produite. Veuillez réessayer.");
+        
+        // Informer la fenêtre parent de l'erreur
+        if (window.opener) {
+          window.opener.postMessage({ 
+            type: 'oauth_error', 
+            error: 'Erreur inattendue' 
+          }, '*');
+          window.close();
+        }
       }
     };
 
@@ -105,30 +132,81 @@ export const useOAuthCallback = (platform?: string) => {
 
         // Vérifier les erreurs renvoyées par le fournisseur OAuth
         if (error) {
-          throw new Error(`Erreur OAuth: ${error}${errorDescription ? ` - ${errorDescription}` : ''}`);
+          const errorMsg = `Erreur OAuth: ${error}${errorDescription ? ` - ${errorDescription}` : ''}`;
+          
+          // Informer la fenêtre parent de l'erreur
+          if (window.opener) {
+            window.opener.postMessage({ 
+              type: 'oauth_error', 
+              error: errorMsg 
+            }, '*');
+            window.close();
+          }
+          
+          throw new Error(errorMsg);
         }
 
         // S'assurer que nous avons un code et un platform valide
         if (!code || !actualPlatform) {
-          throw new Error("Paramètres OAuth manquants");
+          const errorMsg = "Paramètres OAuth manquants";
+          
+          if (window.opener) {
+            window.opener.postMessage({ 
+              type: 'oauth_error', 
+              error: errorMsg 
+            }, '*');
+            window.close();
+          }
+          
+          throw new Error(errorMsg);
         }
 
         // Vérifier que la plateforme est valide
         const validPlatforms = ['facebook', 'twitter', 'instagram', 'linkedin'];
         if (!validPlatforms.includes(actualPlatform)) {
-          throw new Error(`Plateforme non supportée: ${actualPlatform}`);
+          const errorMsg = `Plateforme non supportée: ${actualPlatform}`;
+          
+          if (window.opener) {
+            window.opener.postMessage({ 
+              type: 'oauth_error', 
+              error: errorMsg 
+            }, '*');
+            window.close();
+          }
+          
+          throw new Error(errorMsg);
         }
 
         // Vérifier l'état pour prévenir les attaques CSRF
         const storedState = localStorage.getItem(`${actualPlatform}_oauth_state`);
         if (!storedState) {
           console.warn(`[OAuth] État non trouvé pour ${actualPlatform}`);
-          throw new Error("Session d'authentification expirée ou invalide");
+          const errorMsg = "Session d'authentification expirée ou invalide";
+          
+          if (window.opener) {
+            window.opener.postMessage({ 
+              type: 'oauth_error', 
+              error: errorMsg 
+            }, '*');
+            window.close();
+          }
+          
+          throw new Error(errorMsg);
         }
         
         if (state !== storedState) {
           console.error(`[OAuth] État invalide - attendu: ${storedState}, reçu: ${state}`);
-          throw new Error("État OAuth invalide - possible tentative CSRF");
+          const errorMsg = "État OAuth invalide - possible tentative CSRF";
+          
+          if (window.opener) {
+            window.opener.postMessage({ 
+              type: 'oauth_error', 
+              error: errorMsg 
+            }, '*');
+            window.close();
+          }
+          
+          throw new Error(errorMsg);
         }
 
         // Nettoyer l'état stocké
@@ -145,35 +223,56 @@ export const useOAuthCallback = (platform?: string) => {
         // Récupérer les données du compte depuis Firebase
         const socialAccount = await getSocialAccount(actualPlatform as SocialPlatform);
         
+        let accountDetails = null;
         if (socialAccount) {
+          accountDetails = {
+            platform: actualPlatform,
+            username: socialAccount.username,
+            name: socialAccount.name,
+            userInfo: socialAccount.userInfo
+          };
+          
           if (actualPlatform === 'facebook' && socialAccount.pages) {
-            setConnectionDetails({
-              userInfo: socialAccount.userInfo,
-              pages: socialAccount.pages,
-              pagesCount: socialAccount.pages.length
-            });
+            accountDetails.pages = socialAccount.pages;
+            accountDetails.pagesCount = socialAccount.pages.length;
           }
+          
+          setConnectionDetails(accountDetails);
         }
 
         setStatus('success');
         
-        // Toast de succès personnalisé selon la plateforme
-        if (actualPlatform === 'facebook' && connectionDetails?.pagesCount > 0) {
-          toast({
-            title: "Connexion Facebook réussie",
-            description: `Votre compte Facebook et ${connectionDetails.pagesCount} page(s) ont été connectés avec succès.`,
-          });
+        // Informer la fenêtre parent du succès avec les détails du compte
+        if (window.opener) {
+          window.opener.postMessage({ 
+            type: 'oauth_success', 
+            platform: actualPlatform,
+            account: accountDetails
+          }, '*');
+          
+          // Fermer automatiquement le popup après 1 seconde
+          setTimeout(() => {
+            window.close();
+          }, 1000);
         } else {
-          toast({
-            title: "Connexion réussie",
-            description: `Votre compte ${actualPlatform} a été connecté avec succès.`,
-          });
-        }
+          // Toast de succès si on n'est pas dans un popup
+          if (actualPlatform === 'facebook' && accountDetails?.pagesCount > 0) {
+            toast({
+              title: "Connexion Facebook réussie",
+              description: `Votre compte Facebook et ${accountDetails.pagesCount} page(s) ont été connectés avec succès.`,
+            });
+          } else {
+            toast({
+              title: "Connexion réussie",
+              description: `Votre compte ${actualPlatform} a été connecté avec succès.`,
+            });
+          }
 
-        // Rediriger automatiquement vers le dashboard après une connexion réussie
-        setTimeout(() => {
-          navigate("/dashboard/social", { replace: true });
-        }, 1500);
+          // Rediriger automatiquement vers le dashboard après une connexion réussie
+          setTimeout(() => {
+            navigate("/dashboard/social", { replace: true });
+          }, 1500);
+        }
 
       } catch (error) {
         setStatus('error');
@@ -193,16 +292,28 @@ export const useOAuthCallback = (platform?: string) => {
         
         console.error(`[OAuth] Erreur lors du traitement du callback pour ${platform}:`, error);
         
-        toast({
-          title: "Erreur de connexion",
-          description: message,
-          variant: "destructive",
-        });
+        // Informer la fenêtre parent de l'erreur si on est dans un popup
+        if (window.opener) {
+          window.opener.postMessage({ 
+            type: 'oauth_error', 
+            error: message 
+          }, '*');
+          
+          setTimeout(() => {
+            window.close();
+          }, 2000);
+        } else {
+          toast({
+            title: "Erreur de connexion",
+            description: message,
+            variant: "destructive",
+          });
+        }
       }
     };
 
     processOAuthCallback();
-  }, [location, platform, navigate, toast, connectionDetails?.pagesCount]);
+  }, [location, platform, navigate, toast]);
 
   return {
     status,
