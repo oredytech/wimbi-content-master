@@ -5,6 +5,8 @@ import { exchangeCodeForToken } from '@/services/oauthService';
 import { useToast } from '@/hooks/use-toast';
 import { SocialPlatform } from '@/config/socialConfig';
 import { getSocialAccount } from '@/services/firebase/socialAccountsService';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export const useOAuthCallback = (platform?: string) => {
   const location = useLocation();
@@ -17,6 +19,57 @@ export const useOAuthCallback = (platform?: string) => {
 
   useEffect(() => {
     const processOAuthCallback = async () => {
+      try {
+        // Vérifier d'abord que l'utilisateur est authentifié
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          // Attendre l'état d'authentification
+          const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+              unsubscribe();
+              await handleOAuthProcess();
+            } else {
+              setStatus('error');
+              setErrorMessage("Vous devez être connecté pour ajouter des réseaux sociaux");
+              setDetailedError("Veuillez vous connecter à votre compte avant de connecter des réseaux sociaux.");
+              
+              toast({
+                title: "Erreur d'authentification",
+                description: "Vous devez être connecté pour ajouter des réseaux sociaux",
+                variant: "destructive",
+              });
+              
+              // Rediriger vers la page de connexion après 2 secondes
+              setTimeout(() => {
+                navigate('/login');
+              }, 2000);
+            }
+          });
+          
+          // Timeout au cas où l'authentification prend trop de temps
+          setTimeout(() => {
+            unsubscribe();
+            if (!auth.currentUser) {
+              setStatus('error');
+              setErrorMessage("Session expirée");
+              setDetailedError("Votre session a expiré. Veuillez vous reconnecter.");
+              navigate('/login');
+            }
+          }, 5000);
+          
+          return;
+        }
+        
+        await handleOAuthProcess();
+      } catch (error) {
+        console.error('[OAuth] Erreur lors du processus OAuth:', error);
+        setStatus('error');
+        setErrorMessage("Erreur inattendue");
+        setDetailedError("Une erreur inattendue s'est produite. Veuillez réessayer.");
+      }
+    };
+
+    const handleOAuthProcess = async () => {
       try {
         // Nettoyer l'URL en supprimant les fragments Facebook (#_=_)
         const cleanUrl = window.location.href.replace(/#_=_$/, '');
@@ -119,7 +172,7 @@ export const useOAuthCallback = (platform?: string) => {
 
         // Rediriger automatiquement vers le dashboard après une connexion réussie
         setTimeout(() => {
-          navigate("/dashboard", { replace: true });
+          navigate("/dashboard/social", { replace: true });
         }, 1500);
 
       } catch (error) {
@@ -132,6 +185,8 @@ export const useOAuthCallback = (platform?: string) => {
           setDetailedError("Votre session d'authentification a expiré ou a été interrompue. Veuillez réessayer de vous connecter.");
         } else if (message.includes("access_denied") || message.includes("user_denied")) {
           setDetailedError("Vous avez refusé l'autorisation. Pour connecter votre compte, vous devez accepter les permissions demandées.");
+        } else if (message.includes("Utilisateur non connecté")) {
+          setDetailedError("Vous devez être connecté à votre compte pour ajouter des réseaux sociaux.");
         } else {
           setDetailedError("Vérifiez que les paramètres de votre application sont correctement configurés dans le tableau de bord développeur.");
         }
