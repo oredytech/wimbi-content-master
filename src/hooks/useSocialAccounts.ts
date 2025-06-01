@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useFirebaseErrorHandler } from '@/services/firebase/errorService';
 import { 
   getUserSocialAccounts, 
   removeSocialAccountFromFirebase,
@@ -11,20 +11,15 @@ import { SocialPlatform } from '@/config/socialConfig';
 export const useSocialAccounts = () => {
   const [firebaseSocialAccounts, setFirebaseSocialAccounts] = useState<FirebaseSocialAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const { handleError } = useFirebaseErrorHandler();
 
   const loadSocialAccounts = async () => {
     try {
       const accounts = await getUserSocialAccounts();
       setFirebaseSocialAccounts(accounts);
-      console.log(`[Social] ${accounts.length} comptes chargés depuis Firebase`);
+      console.log(`[Social] ${accounts.length} comptes chargés`);
     } catch (error) {
-      console.error('[Social] Erreur lors du chargement des comptes:', error);
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger vos comptes sociaux",
-        variant: "destructive"
-      });
+      handleError(error, "Chargement des comptes");
     } finally {
       setLoading(false);
     }
@@ -40,17 +35,9 @@ export const useSocialAccounts = () => {
           prev.filter(acc => acc.platform !== platform.toLowerCase())
         );
         
-        toast({
-          title: "Compte supprimé",
-          description: `Le compte ${name} a été supprimé`,
-        });
+        console.log(`[Social] Compte ${name} supprimé avec succès`);
       } catch (error) {
-        console.error('[Social] Erreur lors de la suppression:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de supprimer le compte",
-          variant: "destructive"
-        });
+        handleError(error, "Suppression du compte");
       }
     }
   };

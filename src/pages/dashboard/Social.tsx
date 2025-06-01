@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,12 +13,14 @@ import ScheduledPostsList from './social/ScheduledPostsList';
 import AnalyticsTab from './social/AnalyticsTab';
 import SocialHeader from '@/components/social/SocialHeader';
 import SocialAlerts from '@/components/social/SocialAlerts';
+import FirestoreSetupAlert from '@/components/firebase/FirestoreSetupAlert';
 import { useLocation } from 'react-router-dom';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 
 const Social = () => {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [isSchedulePostModalOpen, setIsSchedulePostModalOpen] = useState(false);
+  const [showFirestoreAlert, setShowFirestoreAlert] = useState(false);
   const { scheduledPosts, removeScheduledPost } = useAppContext();
   const { toast } = useToast();
   const location = useLocation();
@@ -101,6 +102,27 @@ const Social = () => {
     }
   }, [location.search, toast]);
 
+  // Détecter les erreurs de permissions et afficher l'alerte
+  useEffect(() => {
+    const checkForPermissionErrors = () => {
+      // Vérifier s'il y a eu des erreurs de permissions récemment
+      const lastError = localStorage.getItem('last_firebase_error');
+      if (lastError) {
+        try {
+          const errorData = JSON.parse(lastError);
+          if (errorData.code === 'permission-denied') {
+            setShowFirestoreAlert(true);
+            localStorage.removeItem('last_firebase_error');
+          }
+        } catch (e) {
+          // Ignorer les erreurs de parsing
+        }
+      }
+    };
+
+    checkForPermissionErrors();
+  }, []);
+
   const handleToggleConnection = async (id: string, name: string, connected: boolean, platform: string) => {
     if (connected) {
       // Déconnexion = suppression du compte
@@ -155,6 +177,11 @@ const Social = () => {
   return (
     <div className="space-y-6">
       <SocialHeader onAddAccount={() => setIsAddAccountModalOpen(true)} />
+      
+      <FirestoreSetupAlert 
+        show={showFirestoreAlert} 
+        onDismiss={() => setShowFirestoreAlert(false)} 
+      />
       
       <SocialAlerts accounts={firebaseSocialAccounts} />
 
