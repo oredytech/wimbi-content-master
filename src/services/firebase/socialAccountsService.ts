@@ -42,7 +42,7 @@ const ensureUserAuthenticated = () => {
 };
 
 /**
- * Sauvegarde un compte social dans Firestore avec gestion d'erreur améliorée
+ * Sauvegarde un compte social dans Firestore
  */
 export const saveSocialAccountToFirebase = async (accountData: Omit<FirebaseSocialAccount, 'id' | 'userId'>): Promise<string> => {
   try {
@@ -64,26 +64,12 @@ export const saveSocialAccountToFirebase = async (accountData: Omit<FirebaseSoci
   } catch (error) {
     const errorInfo = handleFirebaseError(error);
     console.error(`[Firebase] Erreur lors de la sauvegarde du compte ${accountData.platform}:`, errorInfo);
-    
-    // Pour l'instant, on sauvegarde localement si Firebase échoue
-    if (errorInfo.code === 'permission-denied') {
-      console.warn('[Firebase] Permissions insuffisantes, sauvegarde locale temporaire');
-      const localData = {
-        ...accountData,
-        id: `local_${accountData.platform}_${Date.now()}`,
-        userId: 'local_user',
-        savedLocally: true
-      };
-      localStorage.setItem(`social_account_${accountData.platform}`, JSON.stringify(localData));
-      return localData.id;
-    }
-    
     throw error;
   }
 };
 
 /**
- * Récupère tous les comptes sociaux d'un utilisateur avec fallback local
+ * Récupère tous les comptes sociaux d'un utilisateur
  */
 export const getUserSocialAccounts = async (): Promise<FirebaseSocialAccount[]> => {
   try {
@@ -103,28 +89,7 @@ export const getUserSocialAccounts = async (): Promise<FirebaseSocialAccount[]> 
   } catch (error) {
     const errorInfo = handleFirebaseError(error);
     console.error('[Firebase] Erreur lors de la récupération des comptes:', errorInfo);
-    
-    // Fallback vers le stockage local si Firebase échoue
-    if (errorInfo.code === 'permission-denied') {
-      console.warn('[Firebase] Permissions insuffisantes, récupération locale');
-      const localAccounts: FirebaseSocialAccount[] = [];
-      
-      ['facebook', 'twitter', 'instagram', 'linkedin'].forEach(platform => {
-        const localData = localStorage.getItem(`social_account_${platform}`);
-        if (localData) {
-          try {
-            const account = JSON.parse(localData);
-            localAccounts.push(account);
-          } catch (e) {
-            console.warn(`Données locales corrompues pour ${platform}`);
-          }
-        }
-      });
-      
-      return localAccounts;
-    }
-    
-    return [];
+    throw error;
   }
 };
 
@@ -146,10 +111,7 @@ export const isplatformConnected = async (platform: SocialPlatform): Promise<boo
     return !querySnapshot.empty;
   } catch (error) {
     console.error(`[Firebase] Erreur lors de la vérification de connexion pour ${platform}:`, error);
-    
-    // Fallback local
-    const localData = localStorage.getItem(`social_account_${platform}`);
-    return !!localData;
+    return false;
   }
 };
 
@@ -169,24 +131,12 @@ export const getSocialAccount = async (platform: SocialPlatform): Promise<Fireba
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      // Fallback local
-      const localData = localStorage.getItem(`social_account_${platform}`);
-      if (localData) {
-        return JSON.parse(localData);
-      }
       return null;
     }
 
     return querySnapshot.docs[0].data() as FirebaseSocialAccount;
   } catch (error) {
     console.error(`[Firebase] Erreur lors de la récupération du compte ${platform}:`, error);
-    
-    // Fallback local
-    const localData = localStorage.getItem(`social_account_${platform}`);
-    if (localData) {
-      return JSON.parse(localData);
-    }
-    
     return null;
   }
 };
@@ -212,10 +162,7 @@ export const removeSocialAccountFromFirebase = async (platform: SocialPlatform):
     console.log(`[Firebase] Compte ${platform} supprimé pour l'utilisateur ${user.uid}`);
   } catch (error) {
     console.error(`[Firebase] Erreur lors de la suppression du compte ${platform}:`, error);
-    
-    // Fallback local
-    localStorage.removeItem(`social_account_${platform}`);
-    console.log(`[Local] Compte ${platform} supprimé du stockage local`);
+    throw error;
   }
 };
 

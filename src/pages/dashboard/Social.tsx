@@ -1,21 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plus, Calendar } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAppContext } from '@/context/AppContext';
+import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import AddSocialAccountModal from '@/components/social/AddSocialAccountModal';
-import SchedulePostModal from '@/components/social/SchedulePostModal';
-import SocialAccountList from './social/SocialAccountList';
-import EmptyState from './social/EmptyState';
-import ScheduledPostsList from './social/ScheduledPostsList';
-import AnalyticsTab from './social/AnalyticsTab';
+import { useAppContext } from '@/context/AppContext';
+import { useSocialAccounts } from '@/hooks/useSocialAccounts';
+import { useOAuthMessageHandler } from '@/hooks/useOAuthMessageHandler';
 import SocialHeader from '@/components/social/SocialHeader';
 import SocialAlerts from '@/components/social/SocialAlerts';
+import SocialTabs from '@/components/social/SocialTabs';
 import FirestoreSetupAlert from '@/components/firebase/FirestoreSetupAlert';
-import { useLocation } from 'react-router-dom';
-import { useSocialAccounts } from '@/hooks/useSocialAccounts';
+import AddSocialAccountModal from '@/components/social/AddSocialAccountModal';
+import SchedulePostModal from '@/components/social/SchedulePostModal';
 
 const Social = () => {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -27,62 +22,16 @@ const Social = () => {
   
   const {
     firebaseSocialAccounts,
-    setFirebaseSocialAccounts,
     loading,
     loadSocialAccounts,
     removeAccount
   } = useSocialAccounts();
 
-  // Écouter les messages des popups OAuth
-  useEffect(() => {
-    const handleOAuthMessage = async (event: MessageEvent) => {
-      // Vérifier l'origine du message pour la sécurité
-      if (event.origin !== window.location.origin) {
-        return;
-      }
-
-      if (event.data.type === 'oauth_success') {
-        console.log('[Social] Connexion OAuth réussie:', event.data);
-        
-        // Fermer le modal d'ajout de compte
-        setIsAddAccountModalOpen(false);
-        
-        // Recharger les comptes sociaux
-        await loadSocialAccounts();
-        
-        // Afficher un toast de succès avec les détails du compte
-        const { platform, account } = event.data;
-        
-        if (platform === 'facebook' && account?.pagesCount > 0) {
-          toast({
-            title: "Facebook connecté avec succès",
-            description: `Compte ${account.userInfo?.name || account.username} connecté avec ${account.pagesCount} page(s) disponible(s)`,
-          });
-        } else {
-          toast({
-            title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} connecté`,
-            description: `Compte ${account?.userInfo?.name || account?.username || platform} connecté avec succès`,
-          });
-        }
-      } else if (event.data.type === 'oauth_error') {
-        console.error('[Social] Erreur OAuth:', event.data.error);
-        
-        toast({
-          title: "Erreur de connexion",
-          description: event.data.error,
-          variant: "destructive",
-        });
-      }
-    };
-
-    // Ajouter l'écouteur d'événements
-    window.addEventListener('message', handleOAuthMessage);
-
-    // Nettoyer l'écouteur lors du démontage
-    return () => {
-      window.removeEventListener('message', handleOAuthMessage);
-    };
-  }, [loadSocialAccounts, toast]);
+  // Gérer les messages OAuth
+  useOAuthMessageHandler({
+    onSuccess: loadSocialAccounts,
+    onCloseModal: () => setIsAddAccountModalOpen(false)
+  });
 
   // Détecter les connexions réussies depuis l'URL (fallback)
   useEffect(() => {
@@ -100,12 +49,11 @@ const Social = () => {
         }
       });
     }
-  }, [location.search, toast]);
+  }, [location.search, toast, loadSocialAccounts, firebaseSocialAccounts]);
 
   // Détecter les erreurs de permissions et afficher l'alerte
   useEffect(() => {
     const checkForPermissionErrors = () => {
-      // Vérifier s'il y a eu des erreurs de permissions récemment
       const lastError = localStorage.getItem('last_firebase_error');
       if (lastError) {
         try {
@@ -144,28 +92,6 @@ const Social = () => {
     }
   };
 
-  // Transformer les comptes Firebase en format attendu par SocialAccountList
-  const transformedAccounts = firebaseSocialAccounts.map(acc => ({
-    id: acc.id,
-    name: acc.platform.charAt(0).toUpperCase() + acc.platform.slice(1) as any,
-    username: acc.username,
-    connected: true,
-    icon: acc.platform,
-    color: getColorForPlatform(acc.platform)
-  }));
-
-  function getColorForPlatform(platform: string): string {
-    switch (platform) {
-      case 'facebook': return "bg-blue-600";
-      case 'twitter': return "bg-sky-500";
-      case 'instagram': return "bg-pink-600";
-      case 'linkedin': return "bg-blue-700";
-      default: return "bg-gray-500";
-    }
-  }
-
-  const connectedPlatforms = firebaseSocialAccounts.map(acc => acc.platform);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -185,66 +111,15 @@ const Social = () => {
       
       <SocialAlerts accounts={firebaseSocialAccounts} />
 
-      <Tabs defaultValue="accounts" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="accounts">Comptes connectés</TabsTrigger>
-          <TabsTrigger value="scheduled">Publications planifiées</TabsTrigger>
-          <TabsTrigger value="analytics">Statistiques</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="accounts" className="grid gap-4 md:grid-cols-2">
-          {transformedAccounts.length > 0 ? (
-            <SocialAccountList
-              accounts={transformedAccounts}
-              connectedAccounts={connectedPlatforms}
-              onToggleConnection={handleToggleConnection}
-              onRemoveAccount={removeAccount}
-              onAddAccount={() => setIsAddAccountModalOpen(true)}
-            />
-          ) : null}
-          
-          <EmptyState 
-            onAddAccount={() => setIsAddAccountModalOpen(true)} 
-            hasAccounts={transformedAccounts.length > 0} 
-            anyConnected={transformedAccounts.length > 0}
-          />
-        </TabsContent>
-        
-        <TabsContent value="scheduled">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  <CardTitle>Publications planifiées</CardTitle>
-                </div>
-                <Button 
-                  onClick={() => setIsSchedulePostModalOpen(true)} 
-                  disabled={firebaseSocialAccounts.length === 0}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Planifier une publication
-                </Button>
-              </div>
-              <CardDescription>
-                Gérez vos publications programmées sur tous vos réseaux sociaux
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScheduledPostsList 
-                posts={scheduledPosts}
-                onAddPost={() => setIsSchedulePostModalOpen(true)}
-                onRemovePost={handleRemovePost}
-                socialAccountsConnected={firebaseSocialAccounts.length > 0}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="analytics">
-          <AnalyticsTab />
-        </TabsContent>
-      </Tabs>
+      <SocialTabs
+        firebaseSocialAccounts={firebaseSocialAccounts}
+        scheduledPosts={scheduledPosts}
+        onAddAccount={() => setIsAddAccountModalOpen(true)}
+        onSchedulePost={() => setIsSchedulePostModalOpen(true)}
+        onToggleConnection={handleToggleConnection}
+        onRemoveAccount={removeAccount}
+        onRemovePost={handleRemovePost}
+      />
 
       <AddSocialAccountModal 
         isOpen={isAddAccountModalOpen} 

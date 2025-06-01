@@ -34,9 +34,9 @@ service cloud.firestore {
                    && request.auth.uid == request.resource.data.userId;
     }
     
-    // Règles par défaut : interdire tout accès non autorisé
-    match /{document=**} {
-      allow read, write: if false;
+    // Autoriser la lecture/écriture pour les utilisateurs authentifiés sur leurs propres données
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
@@ -46,16 +46,49 @@ service cloud.firestore {
  * Instructions pour configurer les règles Firestore
  */
 export const SETUP_INSTRUCTIONS = `
-Pour configurer les règles de sécurité Firestore :
+COPIEZ ET COLLEZ CES RÈGLES DANS VOTRE CONSOLE FIREBASE :
 
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Règles pour les comptes sociaux
+    match /socialAccounts/{accountId} {
+      allow read, write: if request.auth != null 
+                        && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null 
+                   && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Règles pour les publications planifiées
+    match /scheduledPosts/{postId} {
+      allow read, write: if request.auth != null 
+                        && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null 
+                   && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Règles pour les sites WordPress
+    match /wordpressSites/{siteId} {
+      allow read, write: if request.auth != null 
+                        && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null 
+                   && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Autoriser la lecture/écriture pour les utilisateurs authentifiés sur leurs propres données
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
+ÉTAPES :
 1. Allez sur https://console.firebase.google.com
 2. Sélectionnez votre projet "wimbimaster-f7d57"
 3. Dans le menu de gauche, cliquez sur "Firestore Database"
 4. Cliquez sur l'onglet "Règles" (Rules)
-5. Remplacez les règles existantes par le contenu fourni
+5. Remplacez TOUTES les règles existantes par le contenu ci-dessus
 6. Cliquez sur "Publier" pour appliquer les modifications
-
-Ces règles permettront aux utilisateurs authentifiés d'accéder uniquement à leurs propres données.
 `;
 
 /**
